@@ -1,6 +1,6 @@
 "use client";
 
-import { BottomNav } from "@/components/BottomNav";
+import { FloatingNav } from "@/components/FloatingNav";
 import { Button } from "@/components/ui";
 import { APP } from "@/lib/config";
 import { useWorldAuth } from "@/lib/useWorldAuth";
@@ -62,7 +62,7 @@ export default function ProfilePage() {
           </Button>
         </div>
       </main>
-      <BottomNav />
+      <FloatingNav />
     </>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { BottomNav } from "@/components/BottomNav";
+import { FloatingNav } from "@/components/FloatingNav";
 import { appAccent, appEmoji, tint } from "@/lib/appStyle";
 import type { AppRecord } from "@/lib/catalog";
 import { APP } from "@/lib/config";
@@ -163,7 +163,7 @@ export default function Home() {
           ))}
         </div>
       </main>
-      <BottomNav />
+      <FloatingNav />
     </>
   );
 }
