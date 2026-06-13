@@ -1,20 +1,37 @@
 import { create } from 'zustand';
 import { SEED_LISTINGS } from '../data/seeds';
+import type { ApiMessage } from '../services/agent';
 import { SimulationResult } from '../services/execution';
 import type { WalletSnapshot } from '../services/wallet';
+import type { ThemeMode } from '../theme';
 import { DappListing, DappManifest } from '../types';
 
+export type UiMessage =
+  | { kind: 'chat'; role: 'user' | 'assistant'; text: string }
+  | { kind: 'activity'; label: string }
+  | { kind: 'card' };
+
 type AppState = {
+  themeMode: ThemeMode;
+  setThemeMode: (mode: ThemeMode) => void;
   verified: boolean;
   verifiedSimulated: boolean;
   setVerified: (v: { verified: boolean; simulated: boolean }) => void;
   wallet: WalletSnapshot | null;
   setWallet: (w: WalletSnapshot) => void;
+  loyalty: Record<string, { punches: number; points: number; redeemed: number }>;
+  addStamp: (ens: string, points: number) => void;
+  redeemReward: (ens: string, cardSize: number) => void;
   listings: DappListing[];
   builderCredits: number;
   publishedCount: number;
   addListing: (l: DappListing) => void;
   markPublished: () => void;
+  apiHistory: ApiMessage[];
+  messages: UiMessage[];
+  agentBusy: boolean;
+  pushMessage: (m: UiMessage) => void;
+  setAgentBusy: (b: boolean) => void;
   draft: DappManifest | null;
   draftPublishedLive: boolean;
   simulation: SimulationResult | null;
@@ -24,17 +41,27 @@ type AppState = {
 };
 
 export const useApp = create<AppState>((set, get) => ({
+  themeMode: 'light',
+  setThemeMode: () => {},
   verified: false,
   verifiedSimulated: false,
   setVerified: ({ verified, simulated }) => set({ verified, verifiedSimulated: simulated }),
   wallet: null,
   setWallet: (wallet) => set({ wallet }),
+  loyalty: {},
+  addStamp: () => {},
+  redeemReward: () => {},
   listings: SEED_LISTINGS,
   builderCredits: 3,
   publishedCount: 0,
   addListing: (l) => set({ listings: [l, ...get().listings] }),
   markPublished: () =>
     set({ builderCredits: get().builderCredits - 1, publishedCount: get().publishedCount + 1 }),
+  apiHistory: [],
+  messages: [],
+  agentBusy: false,
+  pushMessage: (m) => set({ messages: [...get().messages, m] }),
+  setAgentBusy: (agentBusy) => set({ agentBusy }),
   draft: null,
   draftPublishedLive: false,
   simulation: null,
