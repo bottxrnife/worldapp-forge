@@ -22,7 +22,23 @@ const KEYS = {
   reviews: 'dappdock.reviews',
   redpackets: 'dappdock.redpackets',
   contacts: 'dappdock.contacts',
+  shortcuts: 'dappdock.shortcuts',
 };
+
+/** A customizable Home tile — an emoji shortcut to a route (action or dapp). */
+export type HomeShortcut = { id: string; emoji: string; label: string; route: string };
+
+/** The default Home grid (the user can add/remove tiles from here). */
+export const DEFAULT_SHORTCUTS: HomeShortcut[] = [
+  { id: 'pay', emoji: '💸', label: 'Pay', route: '/pay' },
+  { id: 'swap', emoji: '🔄', label: 'Swap', route: '/detail/swap.dappdock.eth' },
+  { id: 'lucky', emoji: '🧧', label: 'Lucky', route: '/redpacket/new' },
+  { id: 'fundraise', emoji: '🎗️', label: 'Fundraise', route: '/detail/fundraise.dappdock.eth' },
+  { id: 'members', emoji: '🎫', label: 'Members', route: '/detail/members.dappdock.eth' },
+  { id: 'agents', emoji: '🤖', label: 'Agents', route: '/store?category=Agents' },
+  { id: 'events', emoji: '🎟️', label: 'Events', route: '/store?category=Events' },
+  { id: 'rewards', emoji: '🎁', label: 'Rewards', route: '/rewards' },
+];
 
 /** Per-dapp loyalty pass: stamps toward the current reward, lifetime points, rewards claimed. */
 export type LoyaltyRecord = { punches: number; points: number; redeemed: number };
@@ -142,7 +158,7 @@ export async function loadThemePreference() {
  * palette side-effect runs before first paint.
  */
 export async function loadPersistedState() {
-  const [loyalty, activity, savedEns, userListings, reviews, redPackets, contacts] = await Promise.all([
+  const [loyalty, activity, savedEns, userListings, reviews, redPackets, contacts, shortcuts] = await Promise.all([
     loadJSON<Record<string, LoyaltyRecord>>(KEYS.loyalty),
     loadJSON<ActivityEntry[]>(KEYS.activity),
     loadJSON<string[]>(KEYS.saved),
@@ -150,6 +166,7 @@ export async function loadPersistedState() {
     loadJSON<Record<string, Review[]>>(KEYS.reviews),
     loadJSON<Record<string, RedPacket>>(KEYS.redpackets),
     loadJSON<Contact[]>(KEYS.contacts),
+    loadJSON<HomeShortcut[]>(KEYS.shortcuts),
   ]);
   const patch: Partial<AppState> = {};
   if (loyalty) patch.loyalty = { ...LOYALTY_SEED, ...loyalty };
@@ -158,6 +175,7 @@ export async function loadPersistedState() {
   if (reviews) patch.reviews = reviews;
   if (redPackets) patch.redPackets = redPackets;
   if (contacts) patch.contacts = contacts;
+  if (shortcuts && shortcuts.length) patch.homeShortcuts = shortcuts;
   if (userListings && userListings.length) {
     patch.userListings = userListings;
     patch.listings = [...userListings, ...SEED_LISTINGS];
@@ -217,6 +235,12 @@ type AppState = {
   savedEns: string[];
   toggleSave: (ens: string) => void;
   isSaved: (ens: string) => boolean;
+
+  // customizable Home tile grid
+  homeShortcuts: HomeShortcut[];
+  addShortcut: (s: HomeShortcut) => void;
+  removeShortcut: (id: string) => void;
+  resetShortcuts: () => void;
 
   // reviews (one per human, keyed by World ID nullifier)
   reviews: Record<string, Review[]>;
@@ -342,6 +366,23 @@ export const useApp = create<AppState>((set, get) => ({
     set({ savedEns });
   },
   isSaved: (ens) => get().savedEns.includes(ens),
+
+  homeShortcuts: DEFAULT_SHORTCUTS,
+  addShortcut: (s) => {
+    if (get().homeShortcuts.some((x) => x.id === s.id)) return;
+    const homeShortcuts = [...get().homeShortcuts, s];
+    persistJSON(KEYS.shortcuts, homeShortcuts);
+    set({ homeShortcuts });
+  },
+  removeShortcut: (id) => {
+    const homeShortcuts = get().homeShortcuts.filter((x) => x.id !== id);
+    persistJSON(KEYS.shortcuts, homeShortcuts);
+    set({ homeShortcuts });
+  },
+  resetShortcuts: () => {
+    persistJSON(KEYS.shortcuts, DEFAULT_SHORTCUTS);
+    set({ homeShortcuts: DEFAULT_SHORTCUTS });
+  },
 
   // reviews (one per human, keyed by World ID nullifier)
   reviews: {},

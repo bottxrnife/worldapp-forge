@@ -1,29 +1,36 @@
 import { useRouter } from 'expo-router';
-import {
-  ArrowLeftRight,
-  ArrowUp,
-  Calendar,
-  DollarSign,
-  Gift,
-  PartyPopper,
-  Sparkles,
-  Users,
-} from 'lucide-react-native';
-import React, { useEffect } from 'react';
-import { Pressable, View } from 'react-native';
+import { Pencil, Plus, X } from 'lucide-react-native';
+import React, { useEffect, useState } from 'react';
+import { Modal, Pressable, ScrollView, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Chip, DappAvatar, ListRow, OpenPill, Screen, SearchPill, SectionHeader, Txt } from '../src/components/ui';
+import { dappEmoji } from '../src/dappStyle';
 import { getWalletSnapshot } from '../src/services/wallet';
-import { syncLoyaltyFromChain, useApp } from '../src/state/store';
+import { HomeShortcut, syncLoyaltyFromChain, useApp } from '../src/state/store';
 import { C } from '../src/theme';
 
-function QuickTile({
-  icon,
+/** Non-dapp actions the user can add to their Home grid (alongside any dapp). */
+const ACTION_CATALOG: HomeShortcut[] = [
+  { id: 'scan', emoji: '📷', label: 'Scan', route: '/scan' },
+  { id: 'wallet', emoji: '👛', label: 'Wallet', route: '/wallet' },
+  { id: 'activity', emoji: '🧾', label: 'Activity', route: '/activity' },
+  { id: 'pay', emoji: '💸', label: 'Pay', route: '/pay' },
+  { id: 'lucky', emoji: '🧧', label: 'Lucky', route: '/redpacket/new' },
+  { id: 'rewards', emoji: '🎁', label: 'Rewards', route: '/rewards' },
+  { id: 'create', emoji: '✨', label: 'Create', route: '/assistant' },
+  { id: 'store', emoji: '🛍️', label: 'Store', route: '/store' },
+];
+
+function ShortcutTile({
+  emoji,
   label,
   onPress,
+  onRemove,
 }: {
-  icon: React.ReactNode;
+  emoji: string;
   label: string;
-  onPress?: () => void;
+  onPress: () => void;
+  onRemove?: () => void;
 }) {
   return (
     <Pressable
@@ -50,10 +57,66 @@ function QuickTile({
           justifyContent: 'center',
         }}
       >
-        {icon}
+        <Txt size={19}>{emoji}</Txt>
       </View>
-      <Txt size={12} w={600}>
+      <Txt size={12} w={600} numberOfLines={1}>
         {label}
+      </Txt>
+      {onRemove && (
+        <Pressable
+          onPress={onRemove}
+          hitSlop={8}
+          style={{
+            position: 'absolute',
+            top: -5,
+            right: -5,
+            width: 22,
+            height: 22,
+            borderRadius: 11,
+            backgroundColor: C.danger,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <X size={13} color={C.white} strokeWidth={3} />
+        </Pressable>
+      )}
+    </Pressable>
+  );
+}
+
+function AddTile({ onPress }: { onPress: () => void }) {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={{
+        flexBasis: '22%',
+        flexGrow: 1,
+        borderRadius: 20,
+        paddingTop: 14,
+        paddingBottom: 12,
+        paddingHorizontal: 6,
+        alignItems: 'center',
+        gap: 8,
+        borderWidth: 1.5,
+        borderColor: C.divider,
+        borderStyle: 'dashed',
+      }}
+    >
+      <View
+        style={{
+          width: 38,
+          height: 38,
+          borderRadius: 19,
+          backgroundColor: C.bg,
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <Plus size={18} color={C.text2} strokeWidth={2.4} />
+      </View>
+      <Txt size={12} w={600} color={C.text2}>
+        Add
       </Txt>
     </Pressable>
   );
@@ -68,11 +131,30 @@ function greeting(): string {
 
 export default function Home() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const verified = useApp((s) => s.verified);
   const wallet = useApp((s) => s.wallet);
   const setWallet = useApp((s) => s.setWallet);
+  const listings = useApp((s) => s.listings);
+  const homeShortcuts = useApp((s) => s.homeShortcuts);
+  const addShortcut = useApp((s) => s.addShortcut);
+  const removeShortcut = useApp((s) => s.removeShortcut);
+  const resetShortcuts = useApp((s) => s.resetShortcuts);
   useApp((s) => s.themeMode); // repaint on theme toggle
-  const icon = (El: any, size = 16) => <El size={size} color={C.blueLink} strokeWidth={2.4} />;
+  const [editing, setEditing] = useState(false);
+  const [showAdd, setShowAdd] = useState(false);
+
+  // Everything the user could add: the action catalog + every store dapp,
+  // minus whatever's already on the grid.
+  const dappShortcuts: HomeShortcut[] = listings.map((l) => ({
+    id: `dapp:${l.manifest.ensName}`,
+    emoji: dappEmoji(l.manifest.ensName, l.manifest.category),
+    label: l.manifest.name,
+    route: `/detail/${l.manifest.ensName}`,
+  }));
+  const addable = [...ACTION_CATALOG, ...dappShortcuts].filter(
+    (s) => !homeShortcuts.some((x) => x.id === s.id)
+  );
 
   useEffect(() => {
     getWalletSnapshot()
@@ -195,16 +277,44 @@ export default function Home() {
           </View>
         </Pressable>
 
-        {/* quick actions — every tile opens a real dapp or a store category */}
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 14 }}>
-          <QuickTile icon={icon(DollarSign)} label="Pay" onPress={() => router.push('/pay')} />
-          <QuickTile icon={icon(ArrowLeftRight)} label="Swap" onPress={() => router.push('/detail/swap.dappdock.eth')} />
-          <QuickTile icon={icon(PartyPopper, 15)} label="Lucky" onPress={() => router.push('/redpacket/new')} />
-          <QuickTile icon={icon(ArrowUp)} label="Fundraise" onPress={() => router.push('/detail/fundraise.dappdock.eth')} />
-          <QuickTile icon={icon(Users, 15)} label="Members" onPress={() => router.push('/detail/members.dappdock.eth')} />
-          <QuickTile icon={icon(Sparkles, 15)} label="Agents" onPress={() => router.push('/store?category=Agents')} />
-          <QuickTile icon={icon(Calendar, 15)} label="Events" onPress={() => router.push('/store?category=Events')} />
-          <QuickTile icon={icon(Gift, 15)} label="Rewards" onPress={() => router.push('/rewards')} />
+        {/* quick actions — a customizable grid the user owns */}
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            marginTop: 18,
+          }}
+        >
+          <Txt size={17} w={800}>
+            Shortcuts
+          </Txt>
+          <Pressable
+            onPress={() => setEditing((e) => !e)}
+            hitSlop={8}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}
+          >
+            <Pencil size={13} color={C.blueLink} strokeWidth={2.4} />
+            <Txt size={13} w={700} color={C.blueLink}>
+              {editing ? 'Done' : 'Customize'}
+            </Txt>
+          </Pressable>
+        </View>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 10 }}>
+          {homeShortcuts.map((s) => (
+            <ShortcutTile
+              key={s.id}
+              emoji={s.emoji}
+              label={s.label}
+              onPress={() => {
+                if (!editing) router.push(s.route as any);
+              }}
+              onRemove={editing ? () => removeShortcut(s.id) : undefined}
+            />
+          ))}
+          {editing && <AddTile onPress={() => setShowAdd(true)} />}
+          {/* keep the last row left-aligned when the count isn't a multiple of 4 */}
+          {homeShortcuts.length % 4 !== 0 && !editing && <View style={{ flexBasis: '22%', flexGrow: 1 }} />}
         </View>
 
         <SectionHeader title="Recommended dapps" link="See all" onLink={() => router.replace('/store')} />
@@ -253,6 +363,73 @@ export default function Home() {
           />
         </View>
       </Screen>
+
+      <Modal visible={showAdd} transparent animationType="slide" onRequestClose={() => setShowAdd(false)}>
+        <Pressable
+          onPress={() => setShowAdd(false)}
+          style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' }}
+        >
+          <Pressable
+            onPress={() => {}}
+            style={{
+              backgroundColor: C.bg,
+              borderTopLeftRadius: 28,
+              borderTopRightRadius: 28,
+              paddingTop: 18,
+              paddingHorizontal: 20,
+              paddingBottom: Math.max(insets.bottom, 16) + 8,
+              maxHeight: '78%',
+            }}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+              <Txt size={18} w={800}>
+                Add to home
+              </Txt>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+                <Pressable onPress={resetShortcuts} hitSlop={8}>
+                  <Txt size={12.5} w={700} color={C.text3}>
+                    Reset
+                  </Txt>
+                </Pressable>
+                <Pressable onPress={() => setShowAdd(false)} hitSlop={8}>
+                  <Txt size={12.5} w={700} color={C.blueLink}>
+                    Done
+                  </Txt>
+                </Pressable>
+              </View>
+            </View>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {addable.map((s) => (
+                <Pressable
+                  key={s.id}
+                  onPress={() => addShortcut(s)}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 12,
+                    paddingVertical: 11,
+                    borderBottomWidth: 1,
+                    borderBottomColor: C.dividerSoft,
+                  }}
+                >
+                  <View style={{ width: 36, height: 36, borderRadius: 12, backgroundColor: C.blueSoft, alignItems: 'center', justifyContent: 'center' }}>
+                    <Txt size={17}>{s.emoji}</Txt>
+                  </View>
+                  <Txt size={14.5} w={600} numberOfLines={1} style={{ flex: 1 }}>
+                    {s.label}
+                  </Txt>
+                  <Plus size={18} color={C.blueLink} strokeWidth={2.6} />
+                </Pressable>
+              ))}
+              {addable.length === 0 && (
+                <Txt size={13} color={C.text3} center style={{ paddingVertical: 24 }}>
+                  Everything’s already on your home screen.
+                </Txt>
+              )}
+            </ScrollView>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
