@@ -5,7 +5,7 @@ import { PunchCard } from '../../src/components/PunchCard';
 import { BackButton, Chip, PrimaryButton, Pulse, Screen, Txt } from '../../src/components/ui';
 import { ExecutionResult, runFlow } from '../../src/services/execution';
 import { verifyHuman } from '../../src/services/verification';
-import { findListing, useApp } from '../../src/state/store';
+import { findListing, hasListing, useApp } from '../../src/state/store';
 import { DappManifest } from '../../src/types';
 import { C } from '../../src/theme';
 
@@ -177,6 +177,22 @@ export default function Runtime() {
             .replace(' and be ', ' and were ');
 
   const timelineSteps = mode === 'redeem' ? redeemSteps : manifest.workflow.steps;
+
+  if (ens && ens !== 'draft' && !hasListing(ens)) {
+    return (
+      <Screen scroll={false}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          <BackButton onPress={() => (router.canGoBack() ? router.back() : router.replace('/store'))} />
+        </View>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 30 }}>
+          <Txt size={20} w={800}>Dapp not found</Txt>
+          <Txt size={14} color={C.text2} center lh={1.5} style={{ marginTop: 8, maxWidth: 280 }}>
+            "{ens}" isn't in the store yet.
+          </Txt>
+        </View>
+      </Screen>
+    );
+  }
 
   return (
     <Screen scroll={runState !== 'form'} style={runState === 'form' ? { flex: 1 } : undefined}>

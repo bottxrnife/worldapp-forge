@@ -5,33 +5,16 @@ import React, { useRef, useState } from 'react';
 import { Platform, Pressable, TextInput, View } from 'react-native';
 import { BackButton, Chip, FadeUp, Txt } from '../src/components/ui';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { routeForPayload } from '../src/services/links';
 import { useApp } from '../src/state/store';
 import { C } from '../src/theme';
-
-/**
- * Resolve a scanned QR payload to an in-app route.
- * Accepted payloads:
- *  - dappdock://detail/<ens> | dappdock://runtime/<ens> (printed dapp codes)
- *  - any string containing an ENS name (e.g. "table12.dappdock.eth",
- *    "https://dappdock.example/d/table12.dappdock.eth")
- */
-function routeForPayload(data: string): { path: string; known: boolean } | null {
-  const deepLink = data.match(/^dappdock:\/\/(detail|runtime)\/([a-z0-9.-]+)/i);
-  if (deepLink) {
-    return { path: `/${deepLink[1]}/${deepLink[2].toLowerCase()}`, known: true };
-  }
-  const ens = data.match(/\b([a-z0-9-]+(?:\.[a-z0-9-]+)*\.eth)\b/i);
-  if (ens) {
-    const name = ens[1].toLowerCase();
-    const known = useApp.getState().listings.some((l) => l.manifest.ensName === name);
-    return { path: `/detail/${name}`, known };
-  }
-  return null;
-}
 
 /** QRs you can "scan" without a printed code — also the demo path on web. */
 const DEMO_CODES: Array<{ label: string; payload: string }> = [
   { label: 'Burger counter', payload: 'dappdock://runtime/burgerblock.dappdock.eth' },
+  { label: 'Order at table', payload: 'dappdock://runtime/bistro.dappdock.eth' },
+  { label: 'Café counter', payload: 'dappdock://runtime/beancounter.dappdock.eth' },
+  { label: 'Parking meter', payload: 'dappdock://runtime/parking.dappdock.eth' },
   { label: 'Restaurant table', payload: 'dappdock://runtime/table12.dappdock.eth' },
   { label: 'Tip jar', payload: 'dappdock://runtime/tipjar.dappdock.eth' },
   { label: 'Event pass', payload: 'dappdock://detail/tickets.dappdock.eth' },

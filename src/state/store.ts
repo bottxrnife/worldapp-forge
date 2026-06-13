@@ -19,12 +19,16 @@ const KEYS = {
   activity: 'dappdock.activity',
   saved: 'dappdock.saved',
   listings: 'dappdock.listings',
+  reviews: 'dappdock.reviews',
 };
 
 /** Per-dapp loyalty pass: stamps toward the current reward, lifetime points, rewards claimed. */
 export type LoyaltyRecord = { punches: number; points: number; redeemed: number };
 
 /** A single entry in the user's activity / receipts feed. */
+/** A one-per-human review, keyed by the World ID nullifier that authored it. */
+export type Review = { rating: number; text: string; nullifier: string; ts: number };
+
 export type ActivityEntry = {
   id: string;
   ens: string;
@@ -84,16 +88,18 @@ export async function loadThemePreference() {
  * Theme is restored separately so its palette side-effect runs before first paint.
  */
 export async function loadPersistedState() {
-  const [loyalty, activity, savedEns, userListings] = await Promise.all([
+  const [loyalty, activity, savedEns, userListings, reviews] = await Promise.all([
     loadJSON<Record<string, LoyaltyRecord>>(KEYS.loyalty),
     loadJSON<ActivityEntry[]>(KEYS.activity),
     loadJSON<string[]>(KEYS.saved),
     loadJSON<DappListing[]>(KEYS.listings),
+    loadJSON<Record<string, Review[]>>(KEYS.reviews),
   ]);
   const patch: Partial<AppState> = {};
   if (loyalty) patch.loyalty = { ...LOYALTY_SEED, ...loyalty };
   if (activity) patch.activity = activity;
   if (savedEns) patch.savedEns = savedEns;
+  if (reviews) patch.reviews = reviews;
   if (userListings && userListings.length) {
     patch.userListings = userListings;
     patch.listings = [...userListings, ...SEED_LISTINGS];
@@ -122,6 +128,8 @@ type AppState = {
   savedEns: string[];
   toggleSave: (ens: string) => void;
   isSaved: (ens: string) => boolean;
+  reviews: Record<string, Review[]>;
+  submitReview: (ens: string, r: Review) => void;
   listings: DappListing[];
   userListings: DappListing[];
   builderCredits: number;
@@ -197,6 +205,15 @@ export const useApp = create<AppState>((set, get) => ({
   },
   isSaved: (ens) => get().savedEns.includes(ens),
 
+  reviews: {},
+  submitReview: (ens, r) => {
+    const existing = get().reviews[ens] ?? [];
+    const next = [r, ...existing.filter((x) => x.nullifier !== r.nullifier)];
+    const reviews = { ...get().reviews, [ens]: next };
+    persistJSON(KEYS.reviews, reviews);
+    set({ reviews });
+  },
+
   listings: SEED_LISTINGS,
   userListings: [],
   builderCredits: 3,
@@ -222,6 +239,11 @@ export const useApp = create<AppState>((set, get) => ({
   setDraftPublishedLive: (live) => set({ draftPublishedLive: live }),
   setSimulation: (simulation) => set({ simulation }),
 }));
+
+/** True when a listing with this ENS actually exists (vs. findListing's fallback). */
+export function hasListing(ens: string | undefined): boolean {
+  return useApp.getState().listings.some((l) => l.manifest.ensName === ens);
+}
 
 export function findListing(ens: string | undefined): DappListing {
   const listings = useApp.getState().listings;

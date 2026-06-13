@@ -42,3 +42,16 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# local snapshots & tooling (not shipped)
+
+# tests & e2e (local QA only)
+__tests__/
+.maestro/
+jest.config.js
+jest.setup.js
+babel.config.js
+coverage/
+
+# misc local docs
+ETHGLOBAL_NYC_2026_SPONSORS.md
