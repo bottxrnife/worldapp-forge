@@ -63,7 +63,7 @@ When you change architecture, add screens, wire integrations, fix bugs, or alter
 20. **`src/services/env.ts`** — reads `EXPO_PUBLIC_*` vars; `hasWorldCreds()`, `hasLifiKey()`.
 21. **`src/services/manifest.ts`** — `validateManifest()` gates agent output; enforces component types, plain-English permissions, 2–6 workflow steps, no raw addresses in permissions.
 22. **`src/services/identity.ts`** — pure ENS via viem mainnet (Universal Resolver): resolve/reverse, ENSIP-5 text records, ENSIP-12 avatars, ENSIP-26 agent records; `publishSubname()` assigns `label.<domain>` (live when it already resolves on-chain).
-23. **`src/services/verification.ts`** — World ID Wallet Bridge (encrypt request → deep link World App → poll bridge → verify on Developer Portal). Simulated when no `WORLD_APP_ID`.
+23. **`src/services/verification.ts`** — **World ID 4.0** (encrypt request → Wallet Bridge → deep link World App → poll bridge → `verifyProof()` against the v4 verify endpoint `/api/v4/verify/{rp_id|app_id}`). Verify URL is configurable for the Track B backend/contract requirement. Simulated when no `WORLD_APP_ID`.
 24. **`src/services/execution.ts`** — LI.FI quote/simulate; **real execution** when wallet funded (approve + send + poll `li.quest/v1/status`); unfunded = validated quote + spec timeline timing. `runFlow` delegates to `composer.ts` when `workflow.composer` is set. All calls go through `ENV.lifiApiUrl`.
 24b. **`src/services/composer.ts`** — **LI.FI Composer**: swap+deposit a user's USDC into a yield vault in ONE composed transaction (a `/quote` whose `toToken` is a vault token → Composer onchain VM). `simulateComposerDeposit` (agent), `runComposerDeposit` (execute, funded → approve LI.FI Diamond + send + poll; unfunded → timeline), `fetchTopUsdcVault` (Earn API discovery, falls back to `DEFAULT_VAULT`).
 25. **`src/services/wallet.ts`** — burner key in `expo-secure-store`; balances on Base/Arbitrum/Optimism/Polygon USDC + native gas.
@@ -223,7 +223,7 @@ Tab bar (home, store, profile): center FAB → /scan; Create → /assistant; Pro
 | Env var | Service | Real behavior | No-key fallback |
 |---|---|---|---|
 | `EXPO_PUBLIC_ANTHROPIC_API_KEY` | `agent.ts` | Claude tool-calling agent | `assistant.ts` template generator; UI shows “template mode” |
-| `EXPO_PUBLIC_WORLD_APP_ID` + `WORLD_ACTION` | `verification.ts` | Wallet Bridge → World App → verify API | Simulated verify (~1.4s) |
+| `EXPO_PUBLIC_WORLD_APP_ID` (+ `_RP_ID`/`_ACTION`/`_ENV`/`_VERIFY_URL`) | `verification.ts` | World ID 4.0: Wallet Bridge → World App → **v4** `/api/v4/verify` (point `_VERIFY_URL` at your backend/contract for Track B) | Simulated verify (~1.4s) |
 | `EXPO_PUBLIC_LIFI_API_KEY` (+ `LIFI_API_URL`, `LIFI_COMPOSER_URL`) | `execution.ts` + `composer.ts` | Cross-chain USDC routing **and** Composer (swap+deposit to a vault in one tx — `toToken`=vault on the open `/quote` API). Key only raises rate limits | Quotes still work unauthenticated; unfunded = validated route + timeline |
 | `EXPO_PUBLIC_ENS_DOMAIN` | `identity.ts` (publish/resolve) + `onchain.ts` (loyalty) | **Pure ENS via viem** — no third-party subname service. Namespace for dapp/agent identities; resolution, reverse names, ENSIP-5 text records, ENSIP-12 avatars, ENSIP-26 agent records all from L1 via the Universal Resolver. Loyalty read from each user's `dappdock.loyalty` text record | No key needed; loyalty falls back to local SecureStore cache when no record/primary name |
 | `EXPO_PUBLIC_ETH_RPC_URL` | `identity.ts` + `onchain.ts` | Mainnet ENS resolution + loyalty/agent text-record reads | Defaults to publicnode |
@@ -343,7 +343,8 @@ npx expo start --tunnel -c   # prefer tunnel for physical devices
 | Publish says simulated ENS | The `label.<domain>` name doesn't resolve on-chain yet | Register the subname for real (on-chain / your own resolver); `publishSubname` flips `live` when it resolves |
 | Punch card says "Saved on device" (not ENS) | Wallet has no primary ENS name, or no `dappdock.loyalty` text record | Set a primary name + a `dappdock.loyalty` JSON text record in any ENS manager; reopen Home to `syncLoyaltyFromChain()` |
 | `Unable to resolve module react-native-qrcode-svg / expo-notifications / expo-local-authentication` | Optional deps not installed | `npx expo install react-native-qrcode-svg expo-notifications expo-local-authentication` |
-| World ID fails on device | Missing World App / wrong app id | Install World App; check `WORLD_APP_ID` format `app_...` |
+| World ID fails on device | Missing World App / wrong app id / env mismatch | Install World App; check `WORLD_APP_ID` is `app_...`; ensure `WORLD_ENV` matches the action's environment (production vs staging — the #1 trap) |
+| World ID verify returns `app_not_migrated` | App isn't on World ID 4.0 | Migrate the app to 4.0 in the Developer Portal, or set `EXPO_PUBLIC_WORLD_PROTOCOL_VERSION`/verify URL to your backend that handles it |
 | `simctl` warning on Mac | No Xcode simulators | Ignore for Expo Go; only affects iOS simulator |
 | Bottom CTAs / tab bar under Android nav buttons | SDK 54 renders edge-to-edge; fixed bottom padding ignores system inset | All bottom padding must derive from `useSafeAreaInsets().bottom` — `Screen` adds it automatically; never hardcode `paddingBottom` on screen roots |
 

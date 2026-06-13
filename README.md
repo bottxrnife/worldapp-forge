@@ -25,7 +25,7 @@ All keys go in `.env` (restart `npx expo start -c` after editing). Each layer fa
 | Key | Where to get it | What it unlocks |
 |---|---|---|
 | `EXPO_PUBLIC_ANTHROPIC_API_KEY` | [console.anthropic.com](https://console.anthropic.com) | The real design agent: an LLM with tool calling that reads your wallet, browses the store, resolves ENS names, checks subname availability, simulates LI.FI routes, and drafts schema-validated dapp manifests. Without it: deterministic template drafting. |
-| `EXPO_PUBLIC_WORLD_APP_ID` + `EXPO_PUBLIC_WORLD_ACTION` | [developer.worldcoin.org](https://developer.worldcoin.org) — create an app and an incognito action | Real proof-of-human: the app deep-links into World App via the Wallet Bridge and verifies the returned proof against the Developer Portal. Gates creation and one-per-human dapps. |
+| `EXPO_PUBLIC_WORLD_APP_ID` (+ `_RP_ID`, `_ACTION`, `_ENV`) | [developer.world.org](https://developer.world.org) — create an app + action, mint an RP/signing key | Real **World ID 4.0** proof-of-human: deep-links into World App via the Wallet Bridge and validates the proof against `/api/v4/verify`. Gates creation and one-per-human dapps. **Track B:** point `EXPO_PUBLIC_WORLD_VERIFY_URL` at your backend/contract for production (verification must not be client-trusted). |
 | `EXPO_PUBLIC_LIFI_API_KEY` | [portal.li.fi](https://portal.li.fi) | Higher-rate LI.FI quotes/status + Composer. Quotes work without a key too. |
 | `EXPO_PUBLIC_ENS_DOMAIN` (+ `EXPO_PUBLIC_ETH_RPC_URL`) | none — **pure ENS via viem** | The namespace for dapp / agent identities (`label.yourdomain.eth`, `assistant.agent.yourdomain.eth`). Resolution, reverse names, ENSIP-5 text records, ENSIP-12 avatars, and ENSIP-26 agent records (`agent-context`, `agent-endpoint[<protocol>]`) all resolve from L1 through the **Universal Resolver** — no API key. Loyalty punch cards are read from each user's `dappdock.loyalty` text record (set it in any ENS manager); otherwise the local device cache is authoritative. |
 
@@ -41,8 +41,8 @@ A burner wallet is generated on first launch and stored in the device keychain (
 The whole app is built on exactly three sponsor integrations, each with a real keyed path and a graceful simulated fallback:
 
 - **ENS** — identity **and** storage, pure viem (no third-party subname service). ENS names resolve recipients/treasuries; the design agent has a verifiable ENSIP-25/26 identity (`assistant.agent.<domain>` with `agent-context` / `agent-endpoint` records); and the **loyalty punch card lives in an ENSIP-5 text record** (`dappdock.loyalty` on each user's primary name) — a credential stored in ENS rather than a private DB.
-- **World ID** — proof-of-human / one-per-human: loyalty cards, red-packet claims, reviews, and gated dapps all break without it.
-- **LI.FI** — cross-chain USDC: every payment, order total, tip, and send is routed from any chain.
+- **World ID 4.0** — proof-of-human / one-per-human: loyalty cards, red-packet claims, reviews, and gated dapps all break without it. Proof validation is designed to run in a backend/contract (configurable verify URL) per World Track B.
+- **LI.FI + Composer** — cross-chain USDC for every payment/order/tip/send, **plus LI.FI Composer** for one-tap swap+deposit "save/earn" dapps (`autosave.dappdock.eth`) where Composer bundles the whole flow into a single transaction.
 
 ## Architecture
 

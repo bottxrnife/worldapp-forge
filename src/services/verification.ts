@@ -1,12 +1,22 @@
 /**
- * verification_service — World ID proof-of-human.
+ * verification_service — World ID 4.0 proof-of-human (sponsor: World).
  *
  * Implements the World ID Wallet Bridge protocol in pure JS (AES-GCM via
- * @noble/ciphers, randomness via expo-crypto) so it runs inside Expo Go:
+ * @noble/ciphers, randomness via expo-crypto) so it runs inside Expo Go without
+ * the web-only IDKit widget:
  *   1. encrypt a verification request and register it with the bridge,
  *   2. deep-link the user into World App,
  *   3. poll the bridge for the encrypted proof,
- *   4. verify the proof against the Developer Portal API.
+ *   4. validate the proof against the World ID 4.0 verify endpoint
+ *      (POST /api/v4/verify/{rp_id}; it verifies 4.0 AND legacy proofs).
+ *
+ * SECURITY — World ID Track B requires proof validation to run in a *backend or
+ * smart contract*, never trusting the client (docs.world.org, SKILL.md Step 5).
+ * `ENV.worldVerifyUrl` is therefore configurable: point it at YOUR backend for
+ * the prize (it forwards the proof to World / verifies on-chain and enforces a
+ * UNIQUE (action, nullifier) constraint — see `submitReview` / red-packet claims
+ * for the one-per-human nullifier checks the app already does). The default hits
+ * the cloud verifier directly so the demo runs without a server.
  *
  * Without EXPO_PUBLIC_WORLD_APP_ID the flow is simulated end-to-end.
  */
@@ -130,7 +140,7 @@ export async function verifyHuman(opts: {
   if (!reqRes.ok) return { verified: false, simulated: false, error: 'Bridge unreachable' };
   const { request_id } = (await reqRes.json()) as { request_id: string };
 
-  const connectUrl = `https://worldcoin.org/verify?t=wld&i=${request_id}&k=${encodeURIComponent(toBase64(key))}`;
+  const connectUrl = `${ENV.worldConnectUrl}?t=wld&i=${request_id}&k=${encodeURIComponent(toBase64(key))}`;
   onStatus('Opening World App…');
   Linking.openURL(connectUrl).catch(() => {});
 
@@ -161,26 +171,71 @@ export async function verifyHuman(opts: {
     }
 
     onStatus('Verifying proof…');
-    const verifyRes = await fetch(
-      `https://developer.worldcoin.org/api/v2/verify/${ENV.worldAppId}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          nullifier_hash: proof.nullifier_hash,
-          merkle_root: proof.merkle_root,
-          proof: proof.proof,
-          verification_level: proof.verification_level,
-          action: ENV.worldAction,
-          signal_hash: signalHash,
-        }),
-      }
-    );
-    const verdict = (await verifyRes.json()) as { success?: boolean; detail?: string };
-    if (verifyRes.ok && verdict.success) {
+    const verdict = await verifyProof(proof, signalHash, request_id);
+    if (verdict.ok) {
       return { verified: true, simulated: false, nullifierHash: proof.nullifier_hash };
     }
-    return { verified: false, simulated: false, error: verdict.detail ?? 'Proof rejected' };
+    return { verified: false, simulated: false, error: verdict.error };
   }
   return { verified: false, simulated: false, error: 'Timed out waiting for World App' };
+}
+
+/**
+ * Validate a World ID proof against the **World ID 4.0** verify endpoint:
+ *   POST {worldVerifyUrl}/{rp_id|app_id}
+ * with the v4 request body (the endpoint verifies 4.0 AND legacy 3.0 proofs;
+ * the Wallet Bridge yields legacy proofs, hence `protocol_version: "3.0"`).
+ *
+ * The proof is forwarded *as received* (per SKILL.md: never mutate proof fields).
+ * Point `ENV.worldVerifyUrl` at your backend for Track B — it owns the real
+ * verification + the UNIQUE nullifier constraint. The default targets World's
+ * cloud verifier so the demo works without a server.
+ */
+async function verifyProof(
+  proof: {
+    proof?: string;
+    merkle_root?: string;
+    nullifier_hash?: string;
+    verification_level?: string;
+  },
+  signalHash: string,
+  nonce: string
+): Promise<{ ok: boolean; error?: string }> {
+  // Map the credential preset to the v4 `responses[].identifier`.
+  const level = proof.verification_level ?? ENV.worldVerificationLevel;
+  const identifier = level.includes('orb') ? 'orb' : 'device';
+
+  const body = {
+    protocol_version: ENV.worldProtocolVersion,
+    nonce,
+    action: ENV.worldAction,
+    environment: ENV.worldEnvironment,
+    responses: [
+      {
+        identifier,
+        merkle_root: proof.merkle_root,
+        nullifier: proof.nullifier_hash,
+        proof: proof.proof,
+        signal_hash: signalHash,
+        max_age: 604_800,
+      },
+    ],
+  };
+
+  try {
+    const res = await fetch(`${ENV.worldVerifyUrl}/${ENV.worldRpId || ENV.worldAppId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const verdict = (await res.json().catch(() => ({}))) as {
+      success?: boolean;
+      detail?: string;
+      code?: string;
+    };
+    if (res.ok && verdict.success) return { ok: true };
+    return { ok: false, error: verdict.detail ?? verdict.code ?? `Proof rejected (${res.status})` };
+  } catch (e) {
+    return { ok: false, error: String(e) };
+  }
 }
