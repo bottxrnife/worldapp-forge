@@ -627,7 +627,12 @@ export default function Runtime() {
             </Pressable>
           )}
           <Pressable
-            onPress={() => router.replace('/home')}
+            onPress={() => {
+              // Return to the dapp itself (its detail page), not the global home.
+              if (ens && ens !== 'draft' && hasListing(ens)) router.replace(`/detail/${ens}`);
+              else if (router.canGoBack()) router.back();
+              else router.replace('/store');
+            }}
             style={{
               backgroundColor: C.cta,
               borderRadius: 16,
@@ -637,7 +642,7 @@ export default function Runtime() {
             }}
           >
             <Txt size={15} w={700} color={C.ctaText}>
-              Back to home
+              Back to app
             </Txt>
           </Pressable>
         </View>

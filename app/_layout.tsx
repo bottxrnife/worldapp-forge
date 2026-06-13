@@ -11,12 +11,45 @@ import {
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
-import { View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { Animated, Easing, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { TabBar } from '../src/components/TabBar';
 import { loadPersistedState, loadThemePreference, useApp } from '../src/state/store';
-import { C } from '../src/theme';
+import { bgFor, C, ThemeMode } from '../src/theme';
+
+/**
+ * Theme crossfade — on a light/dark switch the palette swaps instantly, which
+ * looks harsh. This overlays the *previous* background colour at full opacity
+ * and fades it out, so the newly-themed UI dissolves in smoothly instead of
+ * snapping. Rendered above everything (incl. the tab bar).
+ */
+function ThemeFade({ mode }: { mode: ThemeMode }) {
+  const prev = useRef(mode);
+  const fade = useRef(new Animated.Value(0)).current;
+  const [cover, setCover] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (prev.current === mode) return;
+    setCover(bgFor(prev.current));
+    prev.current = mode;
+    fade.setValue(1);
+    Animated.timing(fade, {
+      toValue: 0,
+      duration: 340,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start(({ finished }) => finished && setCover(null));
+  }, [mode, fade]);
+
+  if (!cover) return null;
+  return (
+    <Animated.View
+      pointerEvents="none"
+      style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: cover, opacity: fade }}
+    />
+  );
+}
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 loadThemePreference();
@@ -50,6 +83,7 @@ export default function RootLayout() {
       />
       {/* One persistent tab bar for all tab routes — never remounts on switch */}
       <TabBar />
+      <ThemeFade mode={themeMode} />
     </SafeAreaProvider>
   );
 }

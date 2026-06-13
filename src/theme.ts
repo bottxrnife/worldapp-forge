@@ -87,6 +87,12 @@ export function setActivePalette(mode: ThemeMode) {
   activePalette = palettes[mode];
 }
 
+/** Background colour for a mode without switching the active palette — used by
+ *  the theme-change crossfade overlay so it can fade from the previous bg. */
+export function bgFor(mode: ThemeMode): string {
+  return palettes[mode].bg;
+}
+
 /** Theme tokens. A proxy so the same import works for both light and dark. */
 export const C: Palette = new Proxy({} as Palette, {
   get: (_target, key) => activePalette[key as keyof Palette],

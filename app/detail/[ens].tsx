@@ -2,7 +2,8 @@ import * as Clipboard from 'expo-clipboard';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Heart, Share2, Star } from 'lucide-react-native';
 import React, { useState } from 'react';
-import { Alert, Pressable, TextInput, View } from 'react-native';
+import { Alert, Pressable, ScrollView, TextInput, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { QR } from '../../src/components/QR';
 import { BackButton, Chip, DappAvatar, PrimaryButton, Screen, Txt } from '../../src/components/ui';
 import { shareLink } from '../../src/services/links';
@@ -54,6 +55,7 @@ function Stars({
 
 export default function Detail() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { ens } = useLocalSearchParams<{ ens: string }>();
   useApp((s) => s.themeMode); // repaint on theme toggle
   const savedEns = useApp((s) => s.savedEns);
@@ -145,7 +147,18 @@ export default function Detail() {
     );
 
   return (
-    <Screen>
+    <View style={{ flex: 1, backgroundColor: C.bg }}>
+      {/* pinned header — stays put as the body scrolls */}
+      <View
+        style={{
+          paddingTop: insets.top + 10,
+          paddingHorizontal: 20,
+          paddingBottom: 10,
+          backgroundColor: C.bg,
+          borderBottomWidth: 1,
+          borderBottomColor: C.dividerSoft,
+        }}
+      >
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
         <BackButton onPress={() => (router.canGoBack() ? router.back() : router.replace('/store'))} />
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
@@ -191,6 +204,11 @@ export default function Detail() {
           </Pressable>
         </View>
       </View>
+      </View>
+      <ScrollView
+        contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 14, paddingBottom: 112 + insets.bottom }}
+        showsVerticalScrollIndicator={false}
+      >
 
       {/* share panel */}
       {showShare && (
@@ -455,13 +473,28 @@ export default function Detail() {
           </View>
         )}
       </View>
-
-      <PrimaryButton
-        testID="detail-run"
-        label="Run dapp"
-        onPress={() => router.push(`/runtime/${m.ensName}`)}
-        style={{ marginTop: 16 }}
-      />
-    </Screen>
+      </ScrollView>
+      {/* pinned Run button — stays put at the bottom */}
+      <View
+        style={{
+          position: 'absolute',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          paddingHorizontal: 20,
+          paddingTop: 10,
+          paddingBottom: Math.max(insets.bottom, 12) + 10,
+          backgroundColor: C.bg,
+          borderTopWidth: 1,
+          borderTopColor: C.dividerSoft,
+        }}
+      >
+        <PrimaryButton
+          testID="detail-run"
+          label="Run dapp"
+          onPress={() => router.push(`/runtime/${m.ensName}`)}
+        />
+      </View>
+    </View>
   );
 }
