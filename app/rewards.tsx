@@ -2,7 +2,7 @@ import { useRouter } from 'expo-router';
 import { ChevronRight, Sparkles } from 'lucide-react-native';
 import React from 'react';
 import { Alert, Pressable, View } from 'react-native';
-import { BackButton, Chip, IconTile, Screen, SectionHeader, Txt } from '../src/components/ui';
+import { BackButton, Chip, DappAvatar, Screen, SectionHeader, Txt } from '../src/components/ui';
 import { POINTS_REWARDS, PointsReward } from '../src/data/seeds';
 import { activePasses, tierFor, totalPoints } from '../src/services/loyalty';
 import { useApp } from '../src/state/store';
@@ -147,7 +147,7 @@ export default function Rewards() {
                   padding: 16,
                 }}
               >
-                <IconTile label={monoFor(ens)} />
+                <DappAvatar ens={ens} category={listingFor(ens)?.manifest.category} />
                 <View style={{ flex: 1, minWidth: 0 }}>
                   <Txt size={15} w={700} numberOfLines={1}>
                     {nameFor(ens)}

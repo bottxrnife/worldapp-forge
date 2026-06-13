@@ -1,7 +1,7 @@
 import { Redirect, useRouter } from 'expo-router';
 import React from 'react';
 import { Pressable, View } from 'react-native';
-import { BackButton, IconTile, PrimaryButton, Screen, Txt } from '../src/components/ui';
+import { BackButton, DappAvatar, PrimaryButton, Screen, Txt } from '../src/components/ui';
 import { useApp } from '../src/state/store';
 import { C } from '../src/theme';
 
@@ -21,12 +21,6 @@ export default function Preview() {
   const submit = draft.components.find((c) => c.type === 'submitButton') as
     | { label: string }
     | undefined;
-  const monogram = draft.name
-    .split(/\s+/)
-    .map((w) => w[0])
-    .join('')
-    .slice(0, 2)
-    .toUpperCase();
 
   const summaryRows: Array<[string, string, string]> = [
     ['Identity', draft.ensName, C.blueLink],
@@ -72,7 +66,7 @@ export default function Preview() {
         </View>
         <View style={{ backgroundColor: C.surface, borderRadius: 20, padding: 18 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-            <IconTile label={monogram} size={34} radius={11} fontSize={12} />
+            <DappAvatar ens={draft.ensName} category={draft.category} size={34} radius={11} />
             <Txt size={14} w={800}>
               {draft.name.split(' ').slice(0, 2).join(' ')}
             </Txt>

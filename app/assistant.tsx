@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { TABBAR_CLEARANCE } from '../src/components/TabBar';
-import { BackButton, FadeUp, IconTile, Pulse, Txt, TypingDots } from '../src/components/ui';
+import { BackButton, DappAvatar, FadeUp, Pulse, Txt, TypingDots } from '../src/components/ui';
 import { hasAgentCreds, runAgentTurn } from '../src/services/agent';
 import { LIFI_DIAMOND } from '../src/services/composer';
 import { ENV } from '../src/services/env';
@@ -120,12 +120,6 @@ const CHIP_PROMPTS: Record<string, string> = {
 };
 
 function DraftCard({ manifest, onOpen }: { manifest: DappManifest; onOpen: () => void }) {
-  const monogram = manifest.name
-    .split(/\s+/)
-    .map((w) => w[0])
-    .join('')
-    .slice(0, 2)
-    .toUpperCase();
   return (
     <View
       style={{
@@ -142,7 +136,7 @@ function DraftCard({ manifest, onOpen }: { manifest: DappManifest; onOpen: () =>
       }}
     >
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-        <IconTile label={monogram} size={46} radius={15} fontSize={15} />
+        <DappAvatar ens={manifest.ensName} category={manifest.category} size={46} radius={15} />
         <View style={{ flex: 1 }}>
           <Txt size={16} w={800}>
             {manifest.name}

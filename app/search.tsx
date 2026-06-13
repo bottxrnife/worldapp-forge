@@ -2,7 +2,7 @@ import { useRouter } from 'expo-router';
 import { Search, Sparkles, X } from 'lucide-react-native';
 import React, { useState } from 'react';
 import { Pressable, TextInput, View } from 'react-native';
-import { BackButton, Chip, IconTile, ListRow, OpenPill, Txt } from '../src/components/ui';
+import { BackButton, Chip, DappAvatar, ListRow, OpenPill, Txt } from '../src/components/ui';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ScrollView } from 'react-native';
 import { filterListings, useApp } from '../src/state/store';
@@ -121,7 +121,7 @@ export default function SearchScreen() {
               {results.map((l) => (
                 <ListRow
                   key={l.manifest.ensName}
-                  icon={<IconTile label={l.monogram} />}
+                  icon={<DappAvatar ens={l.manifest.ensName} category={l.manifest.category} />}
                   title={l.manifest.name}
                   sub={`${l.manifest.category} · ${l.oneLiner}`}
                   right={

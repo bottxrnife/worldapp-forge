@@ -11,7 +11,7 @@ import {
 } from 'lucide-react-native';
 import React, { useEffect } from 'react';
 import { Pressable, View } from 'react-native';
-import { Chip, ListRow, OpenPill, Screen, SearchPill, SectionHeader, Txt } from '../src/components/ui';
+import { Chip, DappAvatar, ListRow, OpenPill, Screen, SearchPill, SectionHeader, Txt } from '../src/components/ui';
 import { getWalletSnapshot } from '../src/services/wallet';
 import { syncLoyaltyFromChain, useApp } from '../src/state/store';
 import { C } from '../src/theme';
@@ -210,42 +210,42 @@ export default function Home() {
         <SectionHeader title="Recommended dapps" link="See all" onLink={() => router.replace('/store')} />
         <View style={{ gap: 8 }}>
           <ListRow
-            rail="Rewards"
+            icon={<DappAvatar ens="burgerblock.dappdock.eth" />}
             title="Burger Block Rewards"
             sub="Eat, stamp, earn — 10 stamps = free burger"
             right={<OpenPill />}
             onPress={() => router.push('/detail/burgerblock.dappdock.eth')}
           />
           <ListRow
-            rail="Food"
+            icon={<DappAvatar ens="bistro.dappdock.eth" />}
             title="Corner Bistro — Order & Pay"
             sub="Order in-app, pay any chain, earn points"
             right={<OpenPill />}
             onPress={() => router.push('/detail/bistro.dappdock.eth')}
           />
           <ListRow
-            rail="Finance"
+            icon={<DappAvatar ens="split.dappdock.eth" />}
             title="Split USDC Payment"
             sub="Collect from any chain"
             right={<OpenPill />}
             onPress={() => router.push('/detail/split.dappdock.eth')}
           />
           <ListRow
-            rail="Community"
+            icon={<DappAvatar ens="daovote.dappdock.eth" />}
             title="DAO Vote Starter"
             sub="One vote per verified human"
             right={<Chip label="World ID gated" bg={C.successBg} color={C.success} />}
             onPress={() => router.push('/detail/daovote.dappdock.eth')}
           />
           <ListRow
-            rail="Agents"
+            icon={<DappAvatar ens="agentmarket.dappdock.eth" />}
             title="Research Agent Market"
             sub="Human-backed agent tools"
             right={<Chip label="ENS verified" bg={C.blueSoft} color={C.blueLink} />}
             onPress={() => router.push('/detail/agentmarket.dappdock.eth')}
           />
           <ListRow
-            rail="Events"
+            icon={<DappAvatar ens="tickets.dappdock.eth" />}
             title="Ticket Claim"
             sub="Claim your event pass"
             right={<Chip label="One per human" bg={C.warnBg} color={C.warn} />}

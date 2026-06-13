@@ -3,7 +3,7 @@ import { useRouter } from 'expo-router';
 import { Copy, Gift, Moon, Receipt, Sparkles, Sun } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { Alert, Pressable, View } from 'react-native';
-import { Chip, IconTile, ListRow, Screen, SectionHeader, Txt } from '../src/components/ui';
+import { Chip, DappAvatar, ListRow, Screen, SectionHeader, Txt } from '../src/components/ui';
 import { AgentKitStatus, getAgentKitStatus, runHumanBackedTask } from '../src/services/agentkit';
 import { AgentProfile, getAgentProfile } from '../src/services/identity';
 import { getWalletSnapshot } from '../src/services/wallet';
@@ -401,7 +401,7 @@ export default function Profile() {
           {created.map((l) => (
             <ListRow
               key={l.manifest.ensName}
-              icon={<IconTile label={l.monogram} />}
+              icon={<DappAvatar ens={l.manifest.ensName} category={l.manifest.category} />}
               title={l.manifest.name}
               sub={`${l.manifest.ensName} · ${l.runs} runs`}
               right={<Chip label="Live" bg={C.successBg} color={C.success} />}
@@ -420,7 +420,7 @@ export default function Profile() {
           {saved.map((l) => (
             <ListRow
               key={l.manifest.ensName}
-              icon={<IconTile label={l.monogram} />}
+              icon={<DappAvatar ens={l.manifest.ensName} category={l.manifest.category} />}
               title={l.manifest.name}
               sub={l.manifest.creator}
               onPress={() => router.push(`/detail/${l.manifest.ensName}`)}

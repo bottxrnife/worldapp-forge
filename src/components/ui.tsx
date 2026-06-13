@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArrowLeft, Search } from 'lucide-react-native';
+import { dappAccent, dappEmoji, tint } from '../dappStyle';
 import { C, font } from '../theme';
 
 /** Typography helper: Geist with explicit weight mapping. */
@@ -213,6 +214,41 @@ export function IconTile({
       <Txt size={fontSize ?? Math.round(size * 0.33)} w={800} color={color}>
         {label}
       </Txt>
+    </View>
+  );
+}
+
+/**
+ * Dapp identity tile — a per-dapp accent wash + emoji so listings feel distinct
+ * (vs. the uniform monogram). Accent + emoji are deterministic from the ENS name
+ * (see dappStyle.ts), so a dapp looks the same everywhere it appears.
+ */
+export function DappAvatar({
+  ens,
+  category,
+  size = 44,
+  radius = 14,
+}: {
+  ens: string;
+  category?: string;
+  size?: number;
+  radius?: number;
+}) {
+  const accent = dappAccent(ens);
+  return (
+    <View
+      style={{
+        width: size,
+        height: size,
+        borderRadius: radius,
+        backgroundColor: tint(accent, 0.16),
+        borderWidth: 1,
+        borderColor: tint(accent, 0.42),
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      <Txt size={Math.round(size * 0.46)}>{dappEmoji(ens, category)}</Txt>
     </View>
   );
 }

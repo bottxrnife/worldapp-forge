@@ -4,7 +4,7 @@ import { Heart, Share2, Star } from 'lucide-react-native';
 import React, { useState } from 'react';
 import { Alert, Pressable, TextInput, View } from 'react-native';
 import { QR } from '../../src/components/QR';
-import { BackButton, Chip, IconTile, PrimaryButton, Screen, Txt } from '../../src/components/ui';
+import { BackButton, Chip, DappAvatar, PrimaryButton, Screen, Txt } from '../../src/components/ui';
 import { shareLink } from '../../src/services/links';
 import { verifyHuman } from '../../src/services/verification';
 import { findListing, hasListing, useApp } from '../../src/state/store';
@@ -216,7 +216,7 @@ export default function Detail() {
       )}
 
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, marginTop: 18 }}>
-        <IconTile label={listing.monogram} size={64} radius={21} fontSize={21} />
+        <DappAvatar ens={listing.manifest.ensName} category={listing.manifest.category} size={64} radius={21} />
         <View style={{ flex: 1 }}>
           <Txt size={21} w={800} ls={-0.01}>
             {m.name}

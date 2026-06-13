@@ -1,7 +1,7 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
-import { Chip, IconTile, ListRow, OpenPill, Screen, SearchPill, SectionHeader, Txt } from '../src/components/ui';
+import { Chip, DappAvatar, ListRow, OpenPill, Screen, SearchPill, SectionHeader, Txt } from '../src/components/ui';
 import { useApp } from '../src/state/store';
 import { DappListing } from '../src/types';
 import { C } from '../src/theme';
@@ -16,7 +16,7 @@ function FeaturedCard({ listing, onPress }: { listing: DappListing; onPress: () 
       style={{ backgroundColor: C.blueSoft, borderRadius: 26, padding: 20, width: 250 }}
     >
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-        <IconTile label={listing.monogram} size={44} radius={15} bg={C.surface} fontSize={15} />
+        <DappAvatar ens={listing.manifest.ensName} category={listing.manifest.category} size={44} radius={15} />
         <Chip label="Featured" bg={C.surface} color={C.blueLink} size={10.5} px={10} py={5} />
       </View>
       <Txt size={17} w={800} color={C.blueInk} style={{ marginTop: 14 }}>
@@ -122,7 +122,7 @@ export default function StoreScreen() {
               {humans.map((l) => (
                 <ListRow
                   key={l.manifest.ensName}
-                  icon={<IconTile label={l.monogram} />}
+                  icon={<DappAvatar ens={l.manifest.ensName} category={l.manifest.category} />}
                   title={l.manifest.name}
                   sub={`${l.manifest.creator} · ${l.oneLiner}`}
                   right={
@@ -146,7 +146,7 @@ export default function StoreScreen() {
               {agents.map((l) => (
                 <ListRow
                   key={l.manifest.ensName}
-                  icon={<IconTile label={l.monogram} />}
+                  icon={<DappAvatar ens={l.manifest.ensName} category={l.manifest.category} />}
                   title={l.manifest.name}
                   sub={`${l.manifest.creator} · Human-backed agents`}
                   right={<Chip label="ENS verified" bg={C.blueSoft} color={C.blueLink} />}
