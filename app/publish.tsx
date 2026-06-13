@@ -103,7 +103,7 @@ export default function Publish() {
         />
         <CheckRow
           title="Permissions reviewed"
-          sub={`${draft.permissions.spendingCap.includes('USDC') ? '$' + parseFloat(draft.permissions.spendingCap) : draft.permissions.spendingCap} spending cap · confirmation required`}
+          sub={`${draft.permissions.spendingCap.includes('USDC') && Number.isFinite(parseFloat(draft.permissions.spendingCap)) ? '$' + parseFloat(draft.permissions.spendingCap).toFixed(2) : draft.permissions.spendingCap} spending cap · confirmation required`}
         />
         <CheckRow
           title="Store listing ready"

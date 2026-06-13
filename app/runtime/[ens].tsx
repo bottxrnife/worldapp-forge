@@ -122,6 +122,7 @@ export default function Runtime() {
   const [result, setResult] = useState<ExecutionResult | null>(null);
 
   const loyalty = useApp((s) => s.loyalty);
+  const loyaltyOnchain = useApp((s) => s.loyaltyOnchain);
   const addStamp = useApp((s) => s.addStamp);
   const redeemReward = useApp((s) => s.redeemReward);
   const recordActivity = useApp((s) => s.recordActivity);
@@ -346,7 +347,7 @@ export default function Runtime() {
         <View style={{ marginTop: 16 }}>
           {punch && (
             <View style={{ marginBottom: 14 }}>
-              <PunchCard brand={manifest.name} total={punch.total} reward={punch.reward} record={record} />
+              <PunchCard brand={manifest.name} total={punch.total} reward={punch.reward} record={record} onchain={loyaltyOnchain} />
             </View>
           )}
           <MenuOrder items={menu.items} cart={cart} onAdd={addItem} onRemove={removeItem} />
@@ -403,7 +404,7 @@ export default function Runtime() {
         <View style={{ flex: 1, marginTop: 16 }}>
           {punch && (
             <View style={{ marginBottom: 10 }}>
-              <PunchCard brand={manifest.name} total={punch.total} reward={punch.reward} record={record} />
+              <PunchCard brand={manifest.name} total={punch.total} reward={punch.reward} record={record} onchain={loyaltyOnchain} />
             </View>
           )}
           <View

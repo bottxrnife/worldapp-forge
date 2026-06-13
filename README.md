@@ -14,17 +14,9 @@ cp .env.example .env   # fill in keys (see below) — optional but recommended
 npx expo start --tunnel -c
 ```
 
-Install **Expo Go** from the Play Store / App Store, then scan the QR code (or use the tunnel URL if LAN fails). The app opens on the onboarding screen.
+Install **Expo Go** from the Play Store / App Store, then scan the QR code (or use the tunnel URL if LAN fails). The app opens on the onboarding screen. On a Mac you can also launch it with **[Expo Orbit](https://expo.dev/orbit)**.
 
-### Browser preview
-
-```bash
-npm run web
-```
-
-Opens **http://localhost:8081** in your browser. The UI is centered in a 392×846 phone frame on a grey backdrop (matches the design spec viewport). Wallet keys use `localStorage` on web; World ID deep-links require a phone with World App — onboarding simulates verification on web.
-
-To build a static site: `npm run web:export` → output in `dist/`.
+> **Native only.** There is no web build — run on a device (Expo Go) or via Expo Orbit. The QR codes, local notifications, and biometric spend-gate use `react-native-qrcode-svg`, `expo-notifications`, and `expo-local-authentication`; install them once with `npx expo install react-native-qrcode-svg expo-notifications expo-local-authentication` (each degrades gracefully if absent).
 
 ## Credentials
 
@@ -35,7 +27,7 @@ All keys go in `.env` (restart `npx expo start -c` after editing). Each layer fa
 | `EXPO_PUBLIC_ANTHROPIC_API_KEY` | [console.anthropic.com](https://console.anthropic.com) | The real design agent: an LLM with tool calling that reads your wallet, browses the store, resolves ENS names, checks subname availability, simulates LI.FI routes, and drafts schema-validated dapp manifests. Without it: deterministic template drafting. |
 | `EXPO_PUBLIC_WORLD_APP_ID` + `EXPO_PUBLIC_WORLD_ACTION` | [developer.worldcoin.org](https://developer.worldcoin.org) — create an app and an incognito action | Real proof-of-human: the app deep-links into World App via the Wallet Bridge and verifies the returned proof against the Developer Portal. Gates creation and one-per-human dapps. |
 | `EXPO_PUBLIC_LIFI_API_KEY` | [portal.li.fi](https://portal.li.fi) | Higher-rate LI.FI quotes/status. Quotes work without a key too. |
-| `EXPO_PUBLIC_NAMESTONE_API_KEY` + `EXPO_PUBLIC_ENS_DOMAIN` | [namestone.com](https://namestone.com) (key for a domain you control) | Publishing writes a **real gasless ENS subname** (`label.yourdomain.eth`) with the dapp manifest in its text records. |
+| `EXPO_PUBLIC_NAMESTONE_API_KEY` + `EXPO_PUBLIC_ENS_DOMAIN` | [namestone.com](https://namestone.com) (key for a domain you control) | Two things: (1) Publishing writes a **real gasless ENS subname** (`label.yourdomain.eth`) with the dapp manifest in its text records. (2) **On-chain loyalty** — your punch card + points are written to your own subname (`m<addr>.yourdomain.eth`) in the `app.loyalty` text record, so the punch count lives on ENS (read on app open, written on every stamp). Without the key, loyalty falls back to the local device cache. |
 
 ## The wallet
 
@@ -44,16 +36,26 @@ A burner wallet is generated on first launch and stored in the device keychain (
 - **Funded** (USDC + a little gas on any of those chains): running a payment dapp executes for real — ERC-20 approval, LI.FI transaction signed and sent from the device, `li.quest/v1/status` polled until funds settle at the destination, explorer link on the done screen.
 - **Unfunded**: the route is still validated with a real LI.FI quote, and the timeline runs in simulated mode.
 
+## Sponsor tracks (three, all real-with-fallback)
+
+The whole app is built on exactly three sponsor integrations, each with a real keyed path and a graceful simulated fallback:
+
+- **ENS** — identity **and** storage. ENS names resolve recipients/treasuries; NameStone issues gasless subnames; and the **loyalty punch card + points are stored on-chain in ENS text records** (`app.loyalty` under each user's subname), not just on-device.
+- **World ID** — proof-of-human / one-per-human: loyalty cards, red-packet claims, reviews, and gated dapps all break without it.
+- **LI.FI** — cross-chain USDC: every payment, order total, tip, and send is routed from any chain.
+
 ## Architecture
 
-- `app/` — expo-router screens: onboarding, home, store, detail, runtime, assistant (Chat/Flow), preview, publish, success, profile.
+- `app/` — expo-router screens: onboarding, home, store, search, detail, runtime, assistant (Chat/Flow), preview, publish, success, profile, **rewards, activity, wallet, pay, redpacket/new, redpacket/[id]**.
 - `src/services/`
   - `agent.ts` — the LLM agent loop (Anthropic Messages API + toolbelt; drafting/simulating only — spending and publishing always require human confirmation).
   - `manifest.ts` — schema validation gate; the runtime only renders validated manifests.
-  - `execution.ts` — LI.FI quote/simulate/execute + status polling.
+  - `execution.ts` — LI.FI quote/simulate/execute + status polling (`runFlow` accepts amount/recipient overrides).
   - `identity.ts` — ENS resolution (viem) + NameStone subname publishing.
+  - `onchain.ts` — **loyalty ↔ ENS text records** (NameStone `set-name` write, `get-names` + viem read), with local-cache fallback.
   - `verification.ts` — World ID Wallet Bridge (pure-JS AES-GCM) + proof verification.
-  - `wallet.ts` — embedded burner wallet (expo-secure-store) + multichain balances.
+  - `wallet.ts` — embedded burner wallet (expo-secure-store) + multichain balances + `sendUsdc` + key backup.
+  - `loyalty.ts` / `notify.ts` / `biometric.ts` / `links.ts` — tier helpers, optional local notifications, optional biometric spend-gate, shared deep-link parsing.
 - `src/data/seeds.ts` — seeded store listings (every listing is a manifest; store, detail, and runtime are all views over the same schema).
 
 ## Product rules enforced in code

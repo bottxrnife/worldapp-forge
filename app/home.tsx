@@ -3,11 +3,9 @@ import {
   ArrowLeftRight,
   ArrowUp,
   Calendar,
-  Check,
   DollarSign,
   Gift,
   PartyPopper,
-  MoreHorizontal,
   Sparkles,
   Users,
 } from 'lucide-react-native';
@@ -16,7 +14,7 @@ import { Pressable, View } from 'react-native';
 import { TabBar } from '../src/components/TabBar';
 import { Chip, ListRow, OpenPill, Screen, SearchPill, SectionHeader, Txt } from '../src/components/ui';
 import { getWalletSnapshot } from '../src/services/wallet';
-import { useApp } from '../src/state/store';
+import { syncLoyaltyFromChain, useApp } from '../src/state/store';
 import { C } from '../src/theme';
 
 function QuickTile({
@@ -78,7 +76,13 @@ export default function Home() {
   const icon = (El: any, size = 16) => <El size={size} color={C.blueLink} strokeWidth={2.4} />;
 
   useEffect(() => {
-    getWalletSnapshot().then(setWallet).catch(() => {});
+    getWalletSnapshot()
+      .then((w) => {
+        setWallet(w);
+        // pull the punch card from ENS (no-op without a NameStone key)
+        syncLoyaltyFromChain();
+      })
+      .catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -194,16 +198,14 @@ export default function Home() {
 
         {/* quick actions — every tile opens a real dapp or a store category */}
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 14 }}>
-          <QuickTile icon={icon(DollarSign)} label="Pay" onPress={() => router.push('/detail/hackdues.dappdock.eth')} />
-          <QuickTile icon={icon(PartyPopper, 15)} label="Lucky" onPress={() => router.push('/redpacket/new')} />
+          <QuickTile icon={icon(DollarSign)} label="Pay" onPress={() => router.push('/pay')} />
           <QuickTile icon={icon(ArrowLeftRight)} label="Swap" onPress={() => router.push('/detail/swap.dappdock.eth')} />
-          <QuickTile icon={icon(Check)} label="Vote" onPress={() => router.push('/detail/daovote.dappdock.eth')} />
+          <QuickTile icon={icon(PartyPopper, 15)} label="Lucky" onPress={() => router.push('/redpacket/new')} />
           <QuickTile icon={icon(ArrowUp)} label="Fundraise" onPress={() => router.push('/detail/fundraise.dappdock.eth')} />
           <QuickTile icon={icon(Users, 15)} label="Members" onPress={() => router.push('/detail/members.dappdock.eth')} />
           <QuickTile icon={icon(Sparkles, 15)} label="Agents" onPress={() => router.push('/store?category=Agents')} />
           <QuickTile icon={icon(Calendar, 15)} label="Events" onPress={() => router.push('/store?category=Events')} />
           <QuickTile icon={icon(Gift, 15)} label="Rewards" onPress={() => router.push('/rewards')} />
-          <QuickTile icon={icon(MoreHorizontal)} label="More" onPress={() => router.replace('/store')} />
         </View>
 
         <SectionHeader title="Recommended dapps" link="See all" onLink={() => router.replace('/store')} />
@@ -214,6 +216,13 @@ export default function Home() {
             sub="Eat, stamp, earn — 10 stamps = free burger"
             right={<OpenPill />}
             onPress={() => router.push('/detail/burgerblock.dappdock.eth')}
+          />
+          <ListRow
+            rail="Food"
+            title="Corner Bistro — Order & Pay"
+            sub="Order in-app, pay any chain, earn points"
+            right={<OpenPill />}
+            onPress={() => router.push('/detail/bistro.dappdock.eth')}
           />
           <ListRow
             rail="Finance"

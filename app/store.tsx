@@ -185,6 +185,28 @@ export default function StoreScreen() {
           </>
         )}
 
+        {featured.length + humans.length + agents.length + recent.length === 0 && (
+          <View style={{ alignItems: 'center', paddingTop: 60, paddingHorizontal: 24 }}>
+            <Txt size={16} w={700}>
+              Nothing in {category} yet
+            </Txt>
+            <Txt size={13.5} color={C.text2} center lh={1.5} style={{ marginTop: 6, maxWidth: 260 }}>
+              Try another category, or describe what you need and the assistant will build it.
+            </Txt>
+            <View style={{ marginTop: 16 }}>
+              <Chip
+                label="✦ Ask the assistant"
+                bg={C.blueSoft}
+                color={C.blueLink}
+                size={13}
+                px={14}
+                py={9}
+                onPress={() => router.push('/assistant')}
+              />
+            </View>
+          </View>
+        )}
+
       </Screen>
       <TabBar active="store" />
     </View>

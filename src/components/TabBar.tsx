@@ -4,7 +4,7 @@ import { House, ScanLine, Sparkles, Store, User } from 'lucide-react-native';
 import React from 'react';
 import { Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { C } from '../theme';
+import { bgWithAlpha, C } from '../theme';
 import { Txt } from './ui';
 
 type Tab = 'home' | 'store' | 'profile';
@@ -21,7 +21,7 @@ export function TabBar({ active }: { active: Tab }) {
   return (
     <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0 }} pointerEvents="box-none">
       <LinearGradient
-        colors={['rgba(245,246,250,0)', C.bg, C.bg]}
+        colors={[bgWithAlpha(0), C.bg, C.bg]}
         locations={[0, 0.4, 1]}
         style={{ paddingHorizontal: 22, paddingTop: 26, paddingBottom: Math.max(insets.bottom, 12) + 12 }}
         pointerEvents="box-none"

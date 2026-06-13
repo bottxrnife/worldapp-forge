@@ -105,3 +105,17 @@ export function font(weight: 400 | 500 | 600 | 700 | 800): string {
 
 /** letterSpacing in px for an em value at a font size. */
 export const ls = (em: number, size: number) => em * size;
+
+/**
+ * The active background as an `rgba()` string with the given alpha. Use as the
+ * transparent stop of a fade-to-bg gradient so it tracks the current theme
+ * (avoids both the light-mode haze in dark mode and the iOS "transparent black"
+ * grey ghost). Read during render so it repaints on theme toggle.
+ */
+export function bgWithAlpha(alpha: number): string {
+  const hex = activePalette.bg.replace('#', '');
+  const r = parseInt(hex.slice(0, 2), 16);
+  const g = parseInt(hex.slice(2, 4), 16);
+  const b = parseInt(hex.slice(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}

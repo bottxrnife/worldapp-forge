@@ -11,6 +11,7 @@ import { C } from '../src/theme';
 export default function Rewards() {
   const router = useRouter();
   const loyalty = useApp((s) => s.loyalty);
+  const loyaltyOnchain = useApp((s) => s.loyaltyOnchain);
   const listings = useApp((s) => s.listings);
   const activity = useApp((s) => s.activity);
   const spendPoints = useApp((s) => s.spendPoints);
@@ -100,10 +101,11 @@ export default function Rewards() {
               width: 6,
               height: 6,
               borderRadius: 3,
-              backgroundColor: C.blueLink,
+              backgroundColor: loyaltyOnchain ? C.successStrong : '#8C9BCB',
             }}
           />
           <Txt size={11} w={600} color="#8C9BCB">
+            {loyaltyOnchain ? 'Synced to ENS text records' : 'Saved on device · add an ENS key to sync'}
           </Txt>
         </View>
       </View>

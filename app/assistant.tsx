@@ -15,7 +15,7 @@ import { BackButton, FadeUp, IconTile, Pulse, Txt, TypingDots } from '../src/com
 import { hasAgentCreds, runAgentTurn } from '../src/services/agent';
 import { useApp } from '../src/state/store';
 import { DappManifest } from '../src/types';
-import { C } from '../src/theme';
+import { bgWithAlpha, C } from '../src/theme';
 
 const PROMPT_CHIPS = [
   'Collect payments',
@@ -332,7 +332,7 @@ export default function Assistant() {
 
             {/* input */}
             <LinearGradient
-              colors={['rgba(245,246,250,0)', C.bg, C.bg]}
+              colors={[bgWithAlpha(0), C.bg, C.bg]}
               locations={[0, 0.3, 1]}
               style={{
                 position: 'absolute',

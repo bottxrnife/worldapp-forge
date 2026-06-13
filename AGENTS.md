@@ -16,7 +16,13 @@ When you change architecture, add screens, wire integrations, fix bugs, or alter
 
 **Stack:** Expo SDK **54** (targets Play Store / App Store Expo Go), React Native 0.81, expo-router ~6, TypeScript, Zustand, viem, Lucide icons, Geist font. Runs in **Expo Go from the stores** (no native build required for dev).
 
+> **Native-only (web removed 2026-06-13):** there is **no web build** anymore — run natively (Expo Go on device, or Expo Orbit on the Mac). `react-dom`/`react-native-web`, the `npm run web`/`web:export` scripts, `app/+html.tsx`, the `app.json` `web` block, and the `_layout.tsx` phone-frame shell were all deleted. Do **not** re-add web support unless the user asks. Persistence is SecureStore-only (no `localStorage`).
+
 > **SDK note:** SDK 56 is **not** on Play/App Store as of 2026-06. Do not upgrade to SDK 56 unless the user explicitly wants dev builds or sideloaded Expo Go from expo.dev/go.
+
+**Sponsor tracks (exactly three — do not add a fourth blockchain integration):** **ENS** (`identity.ts` + `onchain.ts` via NameStone, viem resolution) is identity **and** on-chain storage; **World ID** (`verification.ts`) is proof-of-human / one-per-human; **LI.FI** (`execution.ts`) is cross-chain USDC routing. The Anthropic agent is an AI feature, not a sponsor track. Every integration has a real keyed path and a non-failing simulated fallback — see §6.
+
+**On-chain by design:** the loyalty **punch count + points live on ENS** (text records via NameStone), not just on-device — read on app open, written on every stamp. See §6b.
 
 **Design source of truth:** `design_handoff_dappdock/` — `README.md` (pixel spec), `BUILD_GUIDE.md` (architecture), `dapp-manifest.example.json` (manifest schema), `DappDock.dc.html` + `support.js` (interactive prototype). Home ships **Variant A** (Classic hub) only; B/C exist in the prototype but were not implemented.
 
@@ -104,23 +110,30 @@ dapp-dock/
 │   ├── store.tsx                 # Store tab (?category= param)
 │   ├── profile.tsx               # Profile tab
 │   ├── scan.tsx                  # QR scanner (center tab action)
-│   ├── search.tsx                # Store search
-│   ├── activity.tsx              # Receipt / activity feed
+│   ├── search.tsx                # Store search (filterListings)
+│   ├── rewards.tsx               # Rewards hub: passes, tier, points marketplace
+│   ├── activity.tsx              # Activity / receipts feed
+│   ├── wallet.tsx                # Wallet: receive QR, send, per-chain, backup
+│   ├── pay.tsx                   # Pay-by-ENS (P2P) + contacts + request QR
 │   ├── assistant.tsx             # Create tab → assistant (no tab bar)
 │   ├── preview.tsx               # Generated dapp preview
 │   ├── publish.tsx               # Publish checklist
 │   ├── success.tsx               # Post-publish success
-│   ├── detail/[ens].tsx          # Dapp detail (dynamic ENS slug)
-│   └── runtime/[ens].tsx         # Dapp runtime; ens=draft for draft test
+│   ├── detail/[ens].tsx          # Dapp detail (save, reviews, share QR, not-found)
+│   ├── redpacket/new.tsx         # Create a red packet (lucky money)
+│   ├── redpacket/[id].tsx        # Claim / share a red packet
+│   └── runtime/[ens].tsx         # Dapp runtime; ens=draft; editable inputs; menu/order mode
 ├── src/
 │   ├── theme.ts                  # Design tokens
 │   ├── types.ts                  # DappManifest, DappListing, etc.
 │   ├── polyfills.ts              # crypto.getRandomValues for Hermes
-│   ├── data/seeds.ts             # Seed store listings + HACKDUES_MANIFEST
-│   ├── state/store.ts            # Zustand global state
+│   ├── data/seeds.ts             # Seed listings + HACKDUES/BURGERBLOCK/BISTRO/CAFE + POINTS_REWARDS
+│   ├── state/store.ts            # Zustand global state + persistence (persistJSON/loadJSON)
 │   ├── components/
 │   │   ├── ui.tsx                # Shared UI primitives
 │   │   ├── PunchCard.tsx         # Loyalty punch-card pass (renders `punchCard` component)
+│   │   ├── MenuOrder.tsx         # Restaurant menu + cart (renders `menu` component)
+│   │   ├── QR.tsx                # QR wrapper (optional react-native-qrcode-svg; degrades)
 │   │   └── TabBar.tsx            # Bottom tab bar: Home/Store/Scan FAB/Create/Profile
 │   └── services/
 │       ├── env.ts                # Environment / credential helpers
@@ -129,8 +142,16 @@ dapp-dock/
 │       ├── manifest.ts           # Schema validation
 │       ├── identity.ts           # ENS resolve + NameStone publish
 │       ├── verification.ts       # World ID bridge + verify
-│       ├── execution.ts          # LI.FI simulate + execute
-│       └── wallet.ts             # Embedded burner wallet
+│       ├── execution.ts          # LI.FI simulate + execute (runFlow accepts overrides)
+│       ├── wallet.ts             # Embedded burner wallet + sendUsdc + exportPrivateKey
+│       ├── onchain.ts            # Loyalty ↔ ENS text records (NameStone write, viem read)
+│       ├── loyalty.ts            # Tier ladder + points/pass aggregation helpers
+│       ├── notify.ts             # Optional local notifications (expo-notifications)
+│       ├── biometric.ts          # Optional spend gate (expo-local-authentication)
+│       └── links.ts              # Deep-link parsing + share-link builders
+├── __tests__/                    # Jest unit tests (loyalty, manifest, links, onchain, store)
+├── .maestro/                     # Maestro e2e flows (8 journeys) + README
+├── jest.config.js / jest.setup.js / babel.config.js  # test harness (jest-expo)
 ├── design_handoff_dappdock/      # Original design spec (DO NOT DELETE)
 ├── .env.example                  # Credential template
 ├── app.json                      # Expo config
@@ -145,17 +166,23 @@ dapp-dock/
 
 ```
 Onboarding (/) ── World ID ──→ /home        ── Explore ──→ /store
-/home: search pill → /search; hero → /assistant; tiles → /detail/<ens> or /store?category=
-/store: search pill → /search; rows/featured → /detail/[ens]
-/detail/[ens]: heart saves dapp; Run → /runtime/[ens]
-/profile: Activity → /activity; saved dapps from `savedEns`
-/runtime/[ens]: Ask assistant → /assistant; done → /home
-/scan: QR (dappdock://detail|runtime/<ens> or any ENS string) → /detail|/runtime; manual paste + demo chips
-/assistant: card → /preview
-/preview: Edit → /assistant; Test → /runtime/draft; Publish → /publish
-/publish: → /success
-/success: store → /store; profile → /profile
-Tab bar (home, store, profile): center FAB → /scan; Create → /assistant
+/home: search → /search; hero → /assistant; tiles: Pay → /pay, Swap/Fundraise/Members → /detail/<ens>,
+       Lucky → /redpacket/new, Agents/Events → /store?category=..., Rewards → /rewards; avatar → /profile
+/home: recommended rows → /detail/<ens> (incl. Burger Block, Corner Bistro)
+/search: filterListings results → /detail/[ens]; no match → /assistant
+/store: rows/featured → /detail/[ens]; accepts ?category= deep link; search pill → /search
+/detail/[ens]: Run → /runtime/[ens]; heart → toggleSave; share → QR (dappdock://detail/<ens>);
+       reviews gated by World ID (one per human); unknown ENS → not-found
+/runtime/[ens]: editable amount/memo; menu dapps → in-app cart → pay total; biometric spend gate;
+       loyalty stamp + points + activity recorded; Ask assistant → /assistant; done → /home
+/rewards: passes + tier + points marketplace (spendPoints) → /runtime/<ens>; → /activity
+/activity: receipts feed (tap onchain entry → explorer)
+/wallet: receive QR, send (biometric), per-chain breakdown, reveal key
+/pay: resolve ENS → sendUsdc; recents (contacts); request QR (dappdock://pay?to=…)
+/redpacket/new: create → /redpacket/[id]; /redpacket/[id]: claim (World ID one-per-human) + share QR
+/scan: QR (dappdock://detail|runtime|redpacket|pay/<seg> or any ENS) → route; manual paste + demo chips
+/assistant: card → /preview   /preview: Edit/Test/Publish   /publish → /success
+Tab bar (home, store, profile): center FAB → /scan; Create → /assistant; Profile → /wallet, /rewards, /activity
 ```
 
 ---
@@ -174,14 +201,18 @@ Tab bar (home, store, profile): center FAB → /scan; Create → /assistant
 | `draft` | Current generated `DappManifest` |
 | `draftPublishedLive` | Whether last publish hit real NameStone |
 | `simulation` | Last `SimulationResult` from LI.FI |
-| `loyalty` | Per-dapp `LoyaltyRecord` (`punches`, `points`, `redeemed`), persisted via SecureStore/localStorage |
-| `activity` | Receipt feed (`ActivityEntry[]`), persisted; `recordActivity()` from runtime |
-| `savedEns` | Favorited dapp ENS names, persisted; `toggleSave()` / `isSaved()` on detail |
-| `userListings` | User-published listings, persisted on `addListing()` |
+| `loyalty` | Per-dapp `LoyaltyRecord` (`punches`, `points`, `redeemed`); `addStamp` / `redeemReward(ens, cardSize)` / `spendPoints(ens, cost, label)→bool`. Every mutation mirrors to ENS via `pushLoyaltyOnchain` (see §6b) |
+| `loyaltyOnchain` | `true` once a loyalty write has landed on ENS; drives the "Stamps stored on ENS / Synced to ENS" indicators on `PunchCard` + `/rewards` |
+| `activity` | `ActivityEntry[]` receipts feed; `recordActivity(e)` (capped 100) |
+| `savedEns` | Favorited dapp ENS list; `toggleSave(ens)` / `isSaved(ens)` |
+| `userListings` | User-published listings (merged ahead of seeds into `listings`) |
+| `reviews` | `Record<ens, Review[]>` one-per-human (keyed by World ID nullifier); `submitReview(ens, r)` |
+| `redPackets` | `Record<id, RedPacket>` lucky money; `createRedPacket(opts)→id` / `claimRedPacket(id, nullifier)` |
+| `contacts` | Saved payees for pay-by-ENS; `saveContact(c)` |
 
-**Persistence:** `loadPersistedState()` in `_layout` restores loyalty, activity, saved, and user listings (theme via `loadThemePreference()`).
+**Persistence (local cache):** generic `persistJSON(key, value)` / `loadJSON(key)` over **expo-secure-store only** (web removed). Keys under `dappdock.*` (theme, loyalty, activity, saved, listings, reviews, redpackets, contacts). `loadPersistedState()` restores all slices from `_layout` (alongside `loadThemePreference()`). Theme is stored raw; everything else as JSON. The local cache is the **offline fallback**; for loyalty, ENS is the source of truth (§6b) and `syncLoyaltyFromChain()` (called from Home after the wallet loads) hydrates the cache from chain.
 
-**Helpers:** `findListing(ens)`, `filterListings(listings, query)`, `listingFromManifest(manifest)`.
+**Helpers:** `findListing(ens)`, `listingFromManifest(manifest)`.
 
 ---
 
@@ -192,10 +223,38 @@ Tab bar (home, store, profile): center FAB → /scan; Create → /assistant
 | `EXPO_PUBLIC_ANTHROPIC_API_KEY` | `agent.ts` | Claude tool-calling agent | `assistant.ts` template generator; UI shows “template mode” |
 | `EXPO_PUBLIC_WORLD_APP_ID` + `WORLD_ACTION` | `verification.ts` | Wallet Bridge → World App → verify API | Simulated verify (~1.4s) |
 | `EXPO_PUBLIC_LIFI_API_KEY` | `execution.ts` | Higher rate limits on quotes/status | Quotes still work, rate-limited |
-| `EXPO_PUBLIC_NAMESTONE_API_KEY` + `ENS_DOMAIN` | `identity.ts` | Gasless subname + text records on publish | Simulated publish (~900ms) |
-| `EXPO_PUBLIC_ETH_RPC_URL` | `identity.ts` | Mainnet ENS resolution | Defaults to publicnode |
+| `EXPO_PUBLIC_NAMESTONE_API_KEY` + `ENS_DOMAIN` | `identity.ts` (publish) + `onchain.ts` (loyalty) | Gasless subname + manifest text records on publish; **loyalty punch/points written to each user's `app.loyalty` text record** | Simulated publish (~900ms); loyalty falls back to the local SecureStore cache |
+| `EXPO_PUBLIC_ETH_RPC_URL` | `identity.ts` + `onchain.ts` | Mainnet ENS resolution + loyalty text-record reads | Defaults to publicnode |
 
-**Wallet (no env):** Auto-generated on device. Fund with USDC + gas on Base/Arbitrum/Optimism/Polygon for real LI.FI execution.
+**Wallet (no env):** Auto-generated burner on device (expo-secure-store). Fund with USDC + gas on Base/Arbitrum/Optimism/Polygon for real LI.FI execution / `sendUsdc`; unfunded = simulated timeline. `exportPrivateKey()` reveals the key for backup (behind the biometric gate).
+
+**Every function is real-with-fallback (audited 2026-06-13):** no integration throws into the UI when its key is missing or a network call fails — each returns a clearly-labeled simulated result. Only the three sponsor hosts + the Anthropic agent are contacted: `namestone.com`, an Ethereum RPC, `li.quest`, `bridge.worldcoin.org` / `developer.worldcoin.org`, `api.anthropic.com`. Do not add other external hosts.
+
+---
+
+## 6b. On-chain storage (ENS) & sponsor-track mapping
+
+**Why ENS for storage:** the project is limited to its three implemented sponsor tracks, and "everything on-chain (incl. the punch count)" maps cleanly onto **ENS text records** — exactly the ENS "Most Creative Use" pattern ("store credentials in text records, subnames as access tokens"). No 4th sponsor / no custom contract needed.
+
+**Loyalty on ENS (`src/services/onchain.ts`):**
+- Each user gets a gasless NameStone subname **`m<first-12-hex-of-address>.<ENS_DOMAIN>`** (`memberLabel`/`memberEns`).
+- The punch card lives in that subname's **`app.loyalty` text record** as JSON `{ "<dappEns>": { punches, points, redeemed }, … }` (+ an `app.updated` timestamp).
+- **Write** (`writeLoyalty`): NameStone `POST /api/public_v1/set-name` (full text-records replace — we keep the whole loyalty map in one record). Called fire-and-forget from the store's `pushLoyaltyOnchain` after every `addStamp` / `redeemReward` / `spendPoints`. Returns `true` only when it actually hits NameStone → flips `loyaltyOnchain`.
+- **Read** (`readLoyalty`): NameStone `GET /api/public_v1/get-names?domain=&address=` (primary), then a **viem `getEnsText` CCIP-Read** fallback. `syncLoyaltyFromChain()` (Home, after wallet load) merges chain → local cache (chain wins).
+- **Fallback:** `hasEnsCreds()` false → `readLoyalty` returns `null`, `writeLoyalty` returns `false`; the local SecureStore cache is authoritative and the UI shows "Saved on device". With a key it shows "Stamps stored on ENS".
+
+**Mapping each feature to a sponsor track (all real-with-fallback):**
+
+| Feature | ENS | World ID | LI.FI |
+|---|---|---|---|
+| Loyalty punch card / points | **stores punches+points in text records** | one-card-per-human gate | order/purchase settles any-chain |
+| Restaurant order-ahead (`menu`) | merchant treasury name | optional | cart total routed cross-chain |
+| Red packets / lucky money | sender name | **one-claim-per-human** | claim payout (escrow simulated) |
+| Pay-by-ENS (`/pay`) | **resolve `alice.eth`** | — | `sendUsdc` routes USDC |
+| Reviews | (authored credential) | **one-review-per-human** (nullifier) | — |
+| Publish a dapp | **gasless subname + manifest records** | verified creator | — |
+
+**Extending on-chain storage:** reuse `onchain.ts` pattern — write a JSON blob to a text record via NameStone `set-name`, read via `get-names` + viem fallback, gate on `hasEnsCreds()`, never throw. (Reviews/red-packets are currently local-only; the same helper could push them to ENS if asked.)
 
 ---
 
@@ -222,9 +281,17 @@ The agent **must not** get tools for spending or publishing. Boundaries are prod
 
 Canonical example: `design_handoff_dappdock/dapp-manifest.example.json`.
 
-**Component types:** `amountInput`, `sourceChain`, `recipient`, `memoInput`, `punchCard`, `submitButton`.
+**Component types:** `amountInput`, `sourceChain`, `recipient`, `memoInput`, `punchCard`, `menu`, `submitButton`.
 
-**`punchCard` (loyalty/rewards):** `{ total, reward, pointsPerDollar }`. Runtime renders the pass (stamp grid + points) above the payment form; each successful run calls `addStamp()` (+1 stamp, `amount × pointsPerDollar` points). When the card is full the primary CTA flips to a free local redeem flow (4 generic voucher steps, no payment) that calls `redeemReward()` and resets the stamps. Pair with `requiresWorldId` + `worldPolicy: "one-card-per-human"` so stamps can't be farmed.
+**Adding a component type — touch all 4:** `src/types.ts` union · `COMPONENT_TYPES` in `manifest.ts` · `draft_dapp_manifest` tool description in `agent.ts` · `SYSTEM_PROMPT` pattern in `agent.ts`. Then render it in `runtime/[ens].tsx`.
+
+**`punchCard` (loyalty/rewards):** `{ total, reward, pointsPerDollar }`. Runtime renders the pass (stamp grid + points) above the payment form; each successful run calls `addStamp()` (+1 stamp, `amount × pointsPerDollar` points) and `recordActivity()`. When the card is full the primary CTA flips to a free local redeem flow that calls `redeemReward()` and resets the stamps. Points also feed the `/rewards` hub + marketplace (`spendPoints`). Pair with `requiresWorldId` + `worldPolicy: "one-card-per-human"`.
+
+**`menu` (restaurant ordering):** `{ currency, items: [{ id, name, priceUsd, desc?, tag? }] }`. Runtime enters order mode: `MenuOrder` renders a cart (steppers, grouped by `tag`), the cart total feeds `runFlow(manifest, onStep, { amountUsd: total })`, and the order settles to `recipient` via LI.FI. Cart is runtime state, not a manifest field. Pair with a `punchCard` so each order earns points.
+
+**`amountInput.locked`:** when `false`/absent the runtime renders an **editable** amount (and memo); the entered value flows through `runFlow` overrides. Locked amounts render as static rows (fixed-price dapps).
+
+**`runFlow(manifest, onStep, overrides?)`:** `overrides.amountUsd` / `overrides.recipient` take precedence over component defaults — used by editable inputs, menu carts, and any caller needing a computed amount.
 
 **Validation** (`manifest.ts`): name, description, outcome, ensLabel, 1–5 plain-English permissions (no `0x` addresses), 2–6 workflow steps, submitButton required, `requiresConfirmation: true` always forced.
 
@@ -248,14 +315,14 @@ Canonical example: `design_handoff_dappdock/dapp-manifest.example.json`.
 ## 10. Running & debugging
 
 ```bash
-npm install
-cp .env.example .env   # optional
+npm install --legacy-peer-deps
+# one-time, required by QR / notifications / biometrics (see §12):
+npx expo install react-native-qrcode-svg expo-notifications expo-local-authentication
+cp .env.example .env   # optional — app runs fully simulated without keys
 npx expo start --tunnel -c   # prefer tunnel for physical devices
 ```
 
-**Expo Go URL:** After tunnel starts, read `urlRandomness` from `.expo/settings.json` →  
-`exp://<urlRandomness>-anonymous-8081.exp.direct`  
-Or scan QR from terminal.
+**Native only (no web):** run on a device via **Expo Go** (scan the QR) or on the Mac via **Expo Orbit**. There is no `npm run web`. After tunnel starts, read `urlRandomness` from `.expo/settings.json` → `exp://<urlRandomness>-anonymous-8081.exp.direct`, or scan the QR from the terminal.
 
 **Common failures:**
 
@@ -266,6 +333,8 @@ Or scan QR from terminal.
 | Agent says “template mode” | No Anthropic key | Set `EXPO_PUBLIC_ANTHROPIC_API_KEY`, restart with `-c` |
 | Runtime always simulated | Wallet unfunded | Send USDC + gas to address on Profile |
 | Publish says simulated ENS | No NameStone key | Set `EXPO_PUBLIC_NAMESTONE_API_KEY` |
+| Punch card says "Saved on device" (not ENS) | No NameStone key → loyalty stays local | Set `EXPO_PUBLIC_NAMESTONE_API_KEY` + `ENS_DOMAIN`; reopen Home to `syncLoyaltyFromChain()` |
+| `Unable to resolve module react-native-qrcode-svg / expo-notifications / expo-local-authentication` | Optional deps not installed | `npx expo install react-native-qrcode-svg expo-notifications expo-local-authentication` |
 | World ID fails on device | Missing World App / wrong app id | Install World App; check `WORLD_APP_ID` format `app_...` |
 | `simctl` warning on Mac | No Xcode simulators | Ignore for Expo Go; only affects iOS simulator |
 | Bottom CTAs / tab bar under Android nav buttons | SDK 54 renders edge-to-edge; fixed bottom padding ignores system inset | All bottom padding must derive from `useSafeAreaInsets().bottom` — `Screen` adds it automatically; never hardcode `paddingBottom` on screen roots |
@@ -273,7 +342,9 @@ Or scan QR from terminal.
 **Verify before shipping changes:**
 ```bash
 npx tsc --noEmit
+npm test                                              # Jest unit tests (needs deps installed)
 npx expo export --platform ios --output-dir /tmp/dd-check
+maestro test .maestro/                                # optional, needs a running app + Maestro
 ```
 
 ---
@@ -293,12 +364,14 @@ npx expo export --platform ios --output-dir /tmp/dd-check
 
 - Home variants B and C (prototype only).
 - `assistant_service` does not stream tokens (full response per turn).
-- No Privy/embedded smart-wallet — uses local burner key only.
-- No backend: store is Zustand + seeds; **activity, saved dapps, loyalty, and user-published listings persist** per device (SecureStore/localStorage). No sync across devices.
+- No Privy/embedded smart-wallet — uses local burner key only (now with reveal/backup + `sendUsdc`).
+- No backend: store is Zustand + seeds. User-published listings, loyalty, activity, saved, reviews, red packets and contacts now **persist** across restarts (SecureStore/localStorage); they are still per-device (no sync).
+- Red-packet claim payout is recorded locally (no escrow contract) — World ID one-per-human and the share/claim UX are real; the LI.FI payout leg is simulated like other unfunded paths.
 - No real AgentKit SDK — agent fleet on Profile is static UI per design.
 - Category filter on Store doesn’t filter featured sections consistently for all edge cases.
 - Android-specific World ID / deep link testing not verified.
 - `EXPO_PUBLIC_ANTHROPIC_API_KEY` in client bundle (acceptable for hackathon; move to proxy for production).
+- **New deps required:** `react-native-qrcode-svg`, `expo-notifications`, `expo-local-authentication`. `QR.tsx`, `notify.ts`, `biometric.ts` all degrade gracefully if absent, but the bundle needs them installed (`npx expo install …`). Multi-token execution, assistant streaming, and creator analytics remain unbuilt.
 
 ---
 
@@ -328,7 +401,9 @@ npx expo export --platform ios --output-dir /tmp/dd-check
 
 | Date | Author | Change |
 |---|---|---|
-| 2026-06-13 | Build agent | **Discovery + persistence:** generic `persistJSON`/`loadJSON`; `loadPersistedState()` restores loyalty, activity, saved ENS, user listings; `/search` with `filterListings`; `/activity` receipt feed; heart save on detail; runtime `recordActivity()` on purchase/redeem; profile Activity shortcut + real saved list; home/store search pills → `/search`. |
+| 2026-06-13 | Build agent | **QA hardening: tests, e2e, multi-agent review.** Added a **Jest** harness (`jest.config.js`, `jest.setup.js` mocking expo-secure-store/notifications/local-auth, `babel.config.js`, test scripts, devDeps, tsconfig `exclude` for tests) with unit tests under `__tests__/` for `loyalty`, `manifest`, `links`, `onchain`, and the store (loyalty + red-packet reducers). Added a **Maestro** e2e suite under `.maestro/` (8 journey flows + README): onboarding, loyalty stamp/redeem, restaurant order, rewards hub, red packet, pay-by-ENS, search+save, theme toggle. Ran 4 parallel review agents (design×2, React-correctness, data-layer) and fixed every real finding: dark-mode gradient haze (new `bgWithAlpha()` in theme.ts, used by TabBar + assistant input fade), `pay.tsx` now sends to the **resolved** address (not the raw input) + headline `numberOfLines` + off-token color, `$NaN` guards on spendingCap (publish + detail), red-packet **share-inflation fix** (`createRedPacket` clamps `count ≤ cents` so shares always sum to the funded total), `validateManifest` now checks `punchCard`/`menu` internal shape, stable list keys (reviews/permissions/points/claims), and a Store **empty-category** state. `tsc` + iOS bundle clean. |
+| 2026-06-13 | Build agent | **On-chain loyalty (ENS) + web removed + integration audit.** (1) **Loyalty stored on ENS** — new `src/services/onchain.ts` writes each user's punch/points to their `m<addr>.<ENS_DOMAIN>` subname `app.loyalty` text record via NameStone `set-name`, reads via `get-names` + viem `getEnsText` fallback; store mutations call `pushLoyaltyOnchain` (fire-and-forget), `syncLoyaltyFromChain()` hydrates from chain on Home load; `loyaltyOnchain` flag drives "Stamps stored on ENS / Synced to ENS" indicators on `PunchCard` + `/rewards`; graceful local-cache fallback with no NameStone key (see §6b). (2) **Web emulator deleted** — removed `app/+html.tsx`, the `_layout.tsx` phone-frame, `web`/`web:export` scripts, `react-dom` + `react-native-web`, `app.json` `web` block, and all `Platform.OS==='web'`/`localStorage` branches in `store.ts` + `wallet.ts` (native-only via Expo Orbit; persistence is SecureStore-only). (3) **Audited** every integration for real-keyed-path + non-throwing fallback; confirmed only the three sponsor hosts + Anthropic are contacted. `.env.example` documents on-chain loyalty. `tsc` clean. Parallelized via subagents (audit, web-cleanup, red-packet + pay-by-ENS screens). |
+| 2026-06-13 | Build agent | **Superapp expansion (8 phases).** Foundation: generic `persistJSON`/`loadJSON` + persisted slices (`activity`, `savedEns`, `userListings`, `reviews`, `redPackets`, `contacts`), `loadPersistedState()` in `_layout`. **Rewards** (`/rewards`, `loyalty.ts` tiers, points marketplace `spendPoints`, `/activity` receipts, `notify.ts`). **Discovery** (`/search` + `filterListings`, save/heart on detail + profile, World-ID reviews `submitReview`, listing persistence, not-found guards). **Wallet** (`/wallet`: receive QR, `sendUsdc`, per-chain, `exportPrivateKey`, `biometric.ts` spend gate). **Editable runtime inputs** + `runFlow` overrides; share-a-dapp QR; `links.ts` shared deep-link parser. **Restaurant ordering**: new `menu` component + `MenuOrder.tsx` cart → LI.FI total (seed `bistro.dappdock.eth`). **Red packets** (`/redpacket/new` + `[id]`, World-ID one-claim-per-human, lucky/equal split). **Pay-by-ENS** (`/pay` resolve→`sendUsdc`, contacts, request QR). **Mini-apps batch**: Bean Counter Café, Charity Round-Up, Community Raffle, Parking Meter, Savings Circle, Transit Top-Up (`payManifest` helper). Home tiles → Pay/Lucky/Rewards; Scan demo chips added. New deps: `react-native-qrcode-svg`, `expo-notifications`, `expo-local-authentication` (all optional at runtime). `tsc` clean. |
 | 2026-06-12 | Initial build agent | Full Expo app from `design_handoff_dappdock/` spec: 11 routes, 7 services, LLM agent with 6 tools, wallet + real LI.FI path, World ID bridge, NameStone publish, tunnel dev fix, Hermes base64 fix, Redirect navigation fix, `.env.example`, `README.md`, this `AGENTS.md`. |
 | 2026-06-12 | Build agent | **Downgraded Expo SDK 56 → 54** for Play Store Expo Go compatibility. Updated all `expo-*` packages, `react@19.1.0`, `react-native@0.81.5`, `expo-router@~6.0.24`. Removed invalid `app.json` plugins (`expo-status-bar`, `expo-font`, `expo-web-browser`). Added `start:tunnel` script. |
 | 2026-06-12 | Build agent | **Safe-area fix (Android edge-to-edge):** `Screen` now adds `max(insets.bottom, 12)` to all bottom padding (scroll + non-scroll); removed hardcoded `paddingBottom` override in `app/index.tsx`; assistant chat list/input and Flow tab pad by inset; `TabBar` gradient pads `max(insets.bottom, 12) + 12`. Rule added: never hardcode bottom padding on screen roots (section 10). |
@@ -339,4 +414,4 @@ npx expo export --platform ios --output-dir /tmp/dd-check
 
 ---
 
-*Last reviewed against codebase: 2026-06-12 (SDK 54).*
+*Last reviewed against codebase: 2026-06-13 (SDK 54, native-only, on-chain loyalty via ENS).*

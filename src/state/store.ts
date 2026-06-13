@@ -1,9 +1,9 @@
 import * as SecureStore from 'expo-secure-store';
-import { Platform } from 'react-native';
 import { create } from 'zustand';
 import { SEED_LISTINGS } from '../data/seeds';
 import type { ApiMessage } from '../services/agent';
 import { SimulationResult } from '../services/execution';
+import { readLoyalty, writeLoyalty } from '../services/onchain';
 import type { WalletSnapshot } from '../services/wallet';
 import { setActivePalette, ThemeMode } from '../theme';
 import { DappListing, DappManifest } from '../types';
@@ -21,15 +21,13 @@ const KEYS = {
   listings: 'dappdock.listings',
   reviews: 'dappdock.reviews',
   redpackets: 'dappdock.redpackets',
+  contacts: 'dappdock.contacts',
 };
 
 /** Per-dapp loyalty pass: stamps toward the current reward, lifetime points, rewards claimed. */
 export type LoyaltyRecord = { punches: number; points: number; redeemed: number };
 
 /** A single entry in the user's activity / receipts feed. */
-/** A one-per-human review, keyed by the World ID nullifier that authored it. */
-export type Review = { rating: number; text: string; nullifier: string; ts: number };
-
 export type ActivityEntry = {
   id: string;
   ens: string;
@@ -43,6 +41,8 @@ export type ActivityEntry = {
   explorerUrl?: string;
 };
 
+/** A one-per-human review, keyed by the World ID nullifier that authored it. */
+export type Review = { rating: number; text: string; nullifier: string; ts: number };
 
 /** A lucky-money / red packet: a pool split into N shares, one claim per human. */
 export type RedPacket = {
@@ -51,11 +51,19 @@ export type RedPacket = {
   totalUsd: number;
   count: number;
   split: 'equal' | 'lucky';
-  shares: number[];
+  shares: number[]; // pre-computed per-claim amounts in USD
   claims: Array<{ nullifier: string; amountUsd: number; ts: number }>;
   createdTs: number;
 };
 
+/** A saved payee for pay-by-ENS. */
+export type Contact = { ens: string; address: string; ts: number };
+
+/**
+ * Split a pool into N shares — even, or WeChat-style "lucky" random partition.
+ * Callers must pass `count <= round(totalUsd*100)` (enforced in createRedPacket)
+ * so shares always sum to exactly `totalUsd` and never go to zero.
+ */
 function computeShares(totalUsd: number, count: number, split: 'equal' | 'lucky'): number[] {
   const cents = Math.round(totalUsd * 100);
   if (split === 'equal') {
@@ -65,6 +73,8 @@ function computeShares(totalUsd: number, count: number, split: 'equal' | 'lucky'
     for (let i = 0; rem > 0; i++, rem--) shares[i % count] += 1;
     return shares.map((c) => c / 100);
   }
+  // "lucky": each draw takes a random slice of the remaining pool (double-average),
+  // leaving at least 1 cent for every packet still to come.
   const shares: number[] = [];
   let remaining = cents;
   for (let i = 0; i < count; i++) {
@@ -78,6 +88,7 @@ function computeShares(totalUsd: number, count: number, split: 'equal' | 'lucky'
     shares.push(amt);
     remaining -= amt;
   }
+  // shuffle so position doesn't reveal size
   for (let i = shares.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [shares[i], shares[j]] = [shares[j], shares[i]];
@@ -90,11 +101,14 @@ const LOYALTY_SEED: Record<string, LoyaltyRecord> = {
   'burgerblock.dappdock.eth': { punches: 7, points: 6450, redeemed: 2 },
 };
 
+/**
+ * Generic JSON persistence to the device keychain (expo-secure-store). Every
+ * persisted slice goes through these two helpers — the local cache that backs
+ * the on-chain (ENS) source of truth and works fully offline.
+ */
 async function persistJSON(key: string, value: unknown) {
   try {
-    const json = JSON.stringify(value);
-    if (Platform.OS === 'web') localStorage.setItem(key, json);
-    else await SecureStore.setItemAsync(key, json);
+    await SecureStore.setItemAsync(key, JSON.stringify(value));
   } catch {
     // non-fatal: this slice just won't persist
   }
@@ -102,8 +116,7 @@ async function persistJSON(key: string, value: unknown) {
 
 async function loadJSON<T>(key: string): Promise<T | null> {
   try {
-    const raw =
-      Platform.OS === 'web' ? localStorage.getItem(key) : await SecureStore.getItemAsync(key);
+    const raw = await SecureStore.getItemAsync(key);
     return raw ? (JSON.parse(raw) as T) : null;
   } catch {
     return null;
@@ -113,10 +126,7 @@ async function loadJSON<T>(key: string): Promise<T | null> {
 /** Restore the saved theme before first paint settles; called from _layout. */
 export async function loadThemePreference() {
   try {
-    const saved =
-      Platform.OS === 'web'
-        ? localStorage.getItem(KEYS.theme)
-        : await SecureStore.getItemAsync(KEYS.theme);
+    const saved = await SecureStore.getItemAsync(KEYS.theme);
     if (saved === 'dark' || saved === 'light') {
       setActivePalette(saved);
       useApp.setState({ themeMode: saved });
@@ -127,17 +137,19 @@ export async function loadThemePreference() {
 }
 
 /**
- * Restore persisted slices (loyalty, activity, saved, user listings).
- * Theme is restored separately so its palette side-effect runs before first paint.
+ * Restore every persisted slice (loyalty, activity, saved, user listings,
+ * reviews). Called once from _layout. Theme is restored separately so its
+ * palette side-effect runs before first paint.
  */
 export async function loadPersistedState() {
-  const [loyalty, activity, savedEns, userListings, reviews, redPackets] = await Promise.all([
+  const [loyalty, activity, savedEns, userListings, reviews, redPackets, contacts] = await Promise.all([
     loadJSON<Record<string, LoyaltyRecord>>(KEYS.loyalty),
     loadJSON<ActivityEntry[]>(KEYS.activity),
     loadJSON<string[]>(KEYS.saved),
     loadJSON<DappListing[]>(KEYS.listings),
     loadJSON<Record<string, Review[]>>(KEYS.reviews),
     loadJSON<Record<string, RedPacket>>(KEYS.redpackets),
+    loadJSON<Contact[]>(KEYS.contacts),
   ]);
   const patch: Partial<AppState> = {};
   if (loyalty) patch.loyalty = { ...LOYALTY_SEED, ...loyalty };
@@ -145,6 +157,7 @@ export async function loadPersistedState() {
   if (savedEns) patch.savedEns = savedEns;
   if (reviews) patch.reviews = reviews;
   if (redPackets) patch.redPackets = redPackets;
+  if (contacts) patch.contacts = contacts;
   if (userListings && userListings.length) {
     patch.userListings = userListings;
     patch.listings = [...userListings, ...SEED_LISTINGS];
@@ -152,32 +165,73 @@ export async function loadPersistedState() {
   if (Object.keys(patch).length) useApp.setState(patch);
 }
 
-/** @deprecated use loadPersistedState — kept so older call sites still compile during migration */
-export async function loadLoyaltyState() {
-  await loadPersistedState();
+/**
+ * Mirror the loyalty map to the user's ENS text record (sponsor: ENS). Fire-and-
+ * forget and non-blocking — a missing NameStone key or any failure just leaves
+ * the local SecureStore cache as the source of truth. Flips `loyaltyOnchain`
+ * true once a write actually lands on-chain so the UI can show "Synced to ENS".
+ */
+function pushLoyaltyOnchain(loyalty: Record<string, LoyaltyRecord>) {
+  const address = useApp.getState().wallet?.address;
+  if (!address) return;
+  writeLoyalty(address, loyalty)
+    .then((live) => {
+      if (live && !useApp.getState().loyaltyOnchain) useApp.setState({ loyaltyOnchain: true });
+    })
+    .catch(() => {});
+}
+
+/**
+ * Hydrate the loyalty map from the user's ENS text record (chain wins over the
+ * local cache for shared keys). Safe no-op without a NameStone key. Call once
+ * the wallet address is known (e.g. from the Home/Rewards screens).
+ */
+export async function syncLoyaltyFromChain() {
+  const address = useApp.getState().wallet?.address;
+  if (!address) return;
+  const chain = await readLoyalty(address);
+  if (chain) {
+    const merged = { ...useApp.getState().loyalty, ...chain };
+    persistJSON(KEYS.loyalty, merged);
+    useApp.setState({ loyalty: merged, loyaltyOnchain: true });
+  }
 }
 
 type AppState = {
+  // appearance
   themeMode: ThemeMode;
   setThemeMode: (mode: ThemeMode) => void;
+
+  // session / World ID
   verified: boolean;
   verifiedSimulated: boolean;
   setVerified: (v: { verified: boolean; simulated: boolean }) => void;
+
+  // embedded wallet
   wallet: WalletSnapshot | null;
   setWallet: (w: WalletSnapshot) => void;
+
+  // loyalty passes (punch cards / points per dapp) — mirrored to ENS text records
   loyalty: Record<string, LoyaltyRecord>;
+  loyaltyOnchain: boolean; // true once a loyalty write has landed on ENS
   addStamp: (ens: string, points: number) => void;
   redeemReward: (ens: string, cardSize: number) => void;
   spendPoints: (ens: string, cost: number, rewardLabel: string) => boolean;
 
+  // activity / receipts feed
   activity: ActivityEntry[];
   recordActivity: (e: Omit<ActivityEntry, 'id' | 'ts'>) => void;
+
+  // saved / favorite dapps
   savedEns: string[];
   toggleSave: (ens: string) => void;
   isSaved: (ens: string) => boolean;
+
+  // reviews (one per human, keyed by World ID nullifier)
   reviews: Record<string, Review[]>;
   submitReview: (ens: string, r: Review) => void;
 
+  // red packets / lucky money
   redPackets: Record<string, RedPacket>;
   createRedPacket: (opts: {
     from: string;
@@ -187,19 +241,29 @@ type AppState = {
   }) => string;
   claimRedPacket: (
     id: string,
-    nullifier: string,
+    nullifier: string
   ) => { ok: true; amountUsd: number } | { ok: false; reason: 'not_found' | 'already' | 'empty' };
+
+  // pay-by-ENS contacts
+  contacts: Contact[];
+  saveContact: (c: Contact) => void;
+
+  // store catalogue
   listings: DappListing[];
   userListings: DappListing[];
   builderCredits: number;
   publishedCount: number;
   addListing: (l: DappListing) => void;
   markPublished: () => void;
+
+  // agent conversation
   apiHistory: ApiMessage[];
   messages: UiMessage[];
   agentBusy: boolean;
   pushMessage: (m: UiMessage) => void;
   setAgentBusy: (b: boolean) => void;
+
+  // generated draft
   draft: DappManifest | null;
   draftPublishedLive: boolean;
   simulation: SimulationResult | null;
@@ -212,7 +276,8 @@ export const useApp = create<AppState>((set, get) => ({
   themeMode: 'light',
   setThemeMode: (mode) => {
     setActivePalette(mode);
-    persistJSON(KEYS.theme, mode);
+    // theme is stored as a raw string (loadThemePreference reads it directly)
+    SecureStore.setItemAsync(KEYS.theme, mode).catch(() => {});
     set({ themeMode: mode });
   },
 
@@ -224,6 +289,7 @@ export const useApp = create<AppState>((set, get) => ({
   setWallet: (wallet) => set({ wallet }),
 
   loyalty: LOYALTY_SEED,
+  loyaltyOnchain: false,
   addStamp: (ens, points) => {
     const prev = get().loyalty[ens] ?? { punches: 0, points: 0, redeemed: 0 };
     const loyalty = {
@@ -231,6 +297,7 @@ export const useApp = create<AppState>((set, get) => ({
       [ens]: { ...prev, punches: prev.punches + 1, points: prev.points + points },
     };
     persistJSON(KEYS.loyalty, loyalty);
+    pushLoyaltyOnchain(loyalty);
     set({ loyalty });
   },
   redeemReward: (ens, cardSize) => {
@@ -240,9 +307,9 @@ export const useApp = create<AppState>((set, get) => ({
       [ens]: { ...prev, punches: Math.max(0, prev.punches - cardSize), redeemed: prev.redeemed + 1 },
     };
     persistJSON(KEYS.loyalty, loyalty);
+    pushLoyaltyOnchain(loyalty);
     set({ loyalty });
   },
-
   spendPoints: (ens, cost, rewardLabel) => {
     const prev = get().loyalty[ens] ?? { punches: 0, points: 0, redeemed: 0 };
     if (prev.points < cost) return false;
@@ -251,6 +318,7 @@ export const useApp = create<AppState>((set, get) => ({
       [ens]: { ...prev, points: prev.points - cost },
     };
     persistJSON(KEYS.loyalty, loyalty);
+    pushLoyaltyOnchain(loyalty);
     set({ loyalty });
     get().recordActivity({
       ens,
@@ -261,6 +329,7 @@ export const useApp = create<AppState>((set, get) => ({
     return true;
   },
 
+  // activity / receipts feed
   activity: [],
   recordActivity: (e) => {
     const entry: ActivityEntry = {
@@ -273,28 +342,33 @@ export const useApp = create<AppState>((set, get) => ({
     set({ activity });
   },
 
+  // saved / favorite dapps
   savedEns: [],
   toggleSave: (ens) => {
     const cur = get().savedEns;
-    const savedEns = cur.includes(ens) ? cur.filter((x) => x !== ens) : [ens, ...cur];
+    const savedEns = cur.includes(ens) ? cur.filter((e) => e !== ens) : [ens, ...cur];
     persistJSON(KEYS.saved, savedEns);
     set({ savedEns });
   },
   isSaved: (ens) => get().savedEns.includes(ens),
 
+  // reviews (one per human, keyed by World ID nullifier)
   reviews: {},
   submitReview: (ens, r) => {
     const existing = get().reviews[ens] ?? [];
+    // one review per verified human: replace any prior review from the same nullifier
     const next = [r, ...existing.filter((x) => x.nullifier !== r.nullifier)];
     const reviews = { ...get().reviews, [ens]: next };
     persistJSON(KEYS.reviews, reviews);
     set({ reviews });
   },
 
-
+  // red packets / lucky money
   redPackets: {},
   createRedPacket: ({ from, totalUsd, count, split }) => {
     const id = Math.random().toString(36).slice(2, 8);
+    // can't split a pool into more packets than it has cents — clamp so shares
+    // always sum to exactly totalUsd and never hit zero (see computeShares).
     const safeCount = Math.max(1, Math.min(Math.round(count), Math.round(totalUsd * 100)));
     const packet: RedPacket = {
       id,
@@ -327,6 +401,14 @@ export const useApp = create<AppState>((set, get) => ({
     return { ok: true, amountUsd };
   },
 
+  // pay-by-ENS contacts
+  contacts: [],
+  saveContact: (c) => {
+    const contacts = [c, ...get().contacts.filter((x) => x.ens !== c.ens)].slice(0, 30);
+    persistJSON(KEYS.contacts, contacts);
+    set({ contacts });
+  },
+
   listings: SEED_LISTINGS,
   userListings: [],
   builderCredits: 3,
@@ -353,14 +435,14 @@ export const useApp = create<AppState>((set, get) => ({
   setSimulation: (simulation) => set({ simulation }),
 }));
 
-/** True when a listing with this ENS actually exists (vs. findListing's fallback). */
-export function hasListing(ens: string | undefined): boolean {
-  return useApp.getState().listings.some((l) => l.manifest.ensName === ens);
-}
-
 export function findListing(ens: string | undefined): DappListing {
   const listings = useApp.getState().listings;
   return listings.find((l) => l.manifest.ensName === ens) ?? listings[0];
+}
+
+/** True when a listing with this ENS actually exists (vs. findListing's fallback). */
+export function hasListing(ens: string | undefined): boolean {
+  return useApp.getState().listings.some((l) => l.manifest.ensName === ens);
 }
 
 /** Pure store search: match query against name/description/category/creator/one-liner. */
@@ -379,6 +461,7 @@ export function filterListings(listings: DappListing[], query: string): DappList
   });
 }
 
+/** Wrap a freshly drafted manifest as a store listing once published. */
 export function listingFromManifest(manifest: DappManifest): DappListing {
   const monogram = manifest.name
     .split(/\s+/)
