@@ -73,7 +73,7 @@ export default function StoreScreen() {
           Store
         </Txt>
         <View style={{ marginTop: 14 }}>
-          <SearchPill placeholder="Search the store…" />
+          <SearchPill placeholder="Search the store…" onPress={() => router.push('/search')} />
         </View>
 
         <ScrollView

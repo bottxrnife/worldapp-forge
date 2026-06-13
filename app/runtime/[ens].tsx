@@ -66,6 +66,7 @@ export default function Runtime() {
   const loyalty = useApp((s) => s.loyalty);
   const addStamp = useApp((s) => s.addStamp);
   const redeemReward = useApp((s) => s.redeemReward);
+  const recordActivity = useApp((s) => s.recordActivity);
 
   const amount = manifest.components.find((c) => c.type === 'amountInput') as
     | { type: 'amountInput'; token: string; default: string }
@@ -115,11 +116,28 @@ export default function Runtime() {
       setRunState('processing');
       setRunStep(0);
       const outcome = await runFlow(manifest, setRunStep);
+      const paidUsd = parseFloat(amount?.default ?? '0') || 0;
       if (punch) {
-        addStamp(
-          manifest.ensName,
-          Math.round(parseFloat(amount?.default ?? '0') * punch.pointsPerDollar)
-        );
+        const earned = Math.round(paidUsd * punch.pointsPerDollar);
+        addStamp(manifest.ensName, earned);
+        recordActivity({
+          ens: manifest.ensName,
+          title: manifest.name,
+          kind: 'purchase',
+          amountUsd: paidUsd || undefined,
+          points: earned,
+          live: outcome.live,
+          explorerUrl: outcome.explorerUrl,
+        });
+      } else {
+        recordActivity({
+          ens: manifest.ensName,
+          title: manifest.name,
+          kind: 'purchase',
+          amountUsd: paidUsd || undefined,
+          live: outcome.live,
+          explorerUrl: outcome.explorerUrl,
+        });
       }
       setResult(outcome);
       setRunState('done');
@@ -142,6 +160,7 @@ export default function Runtime() {
       setRunStep(i);
     }
     redeemReward(manifest.ensName, punch.total);
+    recordActivity({ ens: manifest.ensName, title: `Free ${punch.reward}`, kind: 'redeem' });
     await new Promise((r) => setTimeout(r, 500));
     setRunState('done');
   };

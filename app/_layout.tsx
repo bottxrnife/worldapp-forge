@@ -14,12 +14,12 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { Platform, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { loadLoyaltyState, loadThemePreference, useApp } from '../src/state/store';
+import { loadPersistedState, loadThemePreference, useApp } from '../src/state/store';
 import { C } from '../src/theme';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 loadThemePreference();
-loadLoyaltyState();
+loadPersistedState();
 
 export default function RootLayout() {
   const themeMode = useApp((s) => s.themeMode);

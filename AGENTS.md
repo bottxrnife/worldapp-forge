@@ -104,6 +104,8 @@ dapp-dock/
 │   ├── store.tsx                 # Store tab (?category= param)
 │   ├── profile.tsx               # Profile tab
 │   ├── scan.tsx                  # QR scanner (center tab action)
+│   ├── search.tsx                # Store search
+│   ├── activity.tsx              # Receipt / activity feed
 │   ├── assistant.tsx             # Create tab → assistant (no tab bar)
 │   ├── preview.tsx               # Generated dapp preview
 │   ├── publish.tsx               # Publish checklist
@@ -143,10 +145,10 @@ dapp-dock/
 
 ```
 Onboarding (/) ── World ID ──→ /home        ── Explore ──→ /store
-/home: search/hero → /assistant; tiles: Pay/Swap/Vote/Fundraise/Members → /detail/<ens>,
-       Agents/Events → /store?category=..., More → /store; avatar → /profile
-/store: rows/featured → /detail/[ens]; accepts ?category= deep link
-/detail/[ens]: Run → /runtime/[ens]
+/home: search pill → /search; hero → /assistant; tiles → /detail/<ens> or /store?category=
+/store: search pill → /search; rows/featured → /detail/[ens]
+/detail/[ens]: heart saves dapp; Run → /runtime/[ens]
+/profile: Activity → /activity; saved dapps from `savedEns`
 /runtime/[ens]: Ask assistant → /assistant; done → /home
 /scan: QR (dappdock://detail|runtime/<ens> or any ENS string) → /detail|/runtime; manual paste + demo chips
 /assistant: card → /preview
@@ -172,9 +174,14 @@ Tab bar (home, store, profile): center FAB → /scan; Create → /assistant
 | `draft` | Current generated `DappManifest` |
 | `draftPublishedLive` | Whether last publish hit real NameStone |
 | `simulation` | Last `SimulationResult` from LI.FI |
-| `loyalty` | Per-dapp `LoyaltyRecord` (`punches`, `points`, `redeemed`), persisted via SecureStore/localStorage (`dappdock.loyalty`); `addStamp(ens, points)` / `redeemReward(ens, cardSize)`; restored by `loadLoyaltyState()` from `_layout` |
+| `loyalty` | Per-dapp `LoyaltyRecord` (`punches`, `points`, `redeemed`), persisted via SecureStore/localStorage |
+| `activity` | Receipt feed (`ActivityEntry[]`), persisted; `recordActivity()` from runtime |
+| `savedEns` | Favorited dapp ENS names, persisted; `toggleSave()` / `isSaved()` on detail |
+| `userListings` | User-published listings, persisted on `addListing()` |
 
-**Helpers:** `findListing(ens)`, `listingFromManifest(manifest)`.
+**Persistence:** `loadPersistedState()` in `_layout` restores loyalty, activity, saved, and user listings (theme via `loadThemePreference()`).
+
+**Helpers:** `findListing(ens)`, `filterListings(listings, query)`, `listingFromManifest(manifest)`.
 
 ---
 
@@ -287,7 +294,7 @@ npx expo export --platform ios --output-dir /tmp/dd-check
 - Home variants B and C (prototype only).
 - `assistant_service` does not stream tokens (full response per turn).
 - No Privy/embedded smart-wallet — uses local burner key only.
-- No backend: store is in-memory Zustand + seeds; published dapps don’t persist across app restarts except added to `listings` in session.
+- No backend: store is Zustand + seeds; **activity, saved dapps, loyalty, and user-published listings persist** per device (SecureStore/localStorage). No sync across devices.
 - No real AgentKit SDK — agent fleet on Profile is static UI per design.
 - Category filter on Store doesn’t filter featured sections consistently for all edge cases.
 - Android-specific World ID / deep link testing not verified.
@@ -321,6 +328,7 @@ npx expo export --platform ios --output-dir /tmp/dd-check
 
 | Date | Author | Change |
 |---|---|---|
+| 2026-06-13 | Build agent | **Discovery + persistence:** generic `persistJSON`/`loadJSON`; `loadPersistedState()` restores loyalty, activity, saved ENS, user listings; `/search` with `filterListings`; `/activity` receipt feed; heart save on detail; runtime `recordActivity()` on purchase/redeem; profile Activity shortcut + real saved list; home/store search pills → `/search`. |
 | 2026-06-12 | Initial build agent | Full Expo app from `design_handoff_dappdock/` spec: 11 routes, 7 services, LLM agent with 6 tools, wallet + real LI.FI path, World ID bridge, NameStone publish, tunnel dev fix, Hermes base64 fix, Redirect navigation fix, `.env.example`, `README.md`, this `AGENTS.md`. |
 | 2026-06-12 | Build agent | **Downgraded Expo SDK 56 → 54** for Play Store Expo Go compatibility. Updated all `expo-*` packages, `react@19.1.0`, `react-native@0.81.5`, `expo-router@~6.0.24`. Removed invalid `app.json` plugins (`expo-status-bar`, `expo-font`, `expo-web-browser`). Added `start:tunnel` script. |
 | 2026-06-12 | Build agent | **Safe-area fix (Android edge-to-edge):** `Screen` now adds `max(insets.bottom, 12)` to all bottom padding (scroll + non-scroll); removed hardcoded `paddingBottom` override in `app/index.tsx`; assistant chat list/input and Flow tab pad by inset; `TabBar` gradient pads `max(insets.bottom, 12) + 12`. Rule added: never hardcode bottom padding on screen roots (section 10). |

@@ -1,6 +1,6 @@
 import * as Clipboard from 'expo-clipboard';
 import { useRouter } from 'expo-router';
-import { Copy, Moon, Sparkles, Sun } from 'lucide-react-native';
+import { Copy, Moon, Receipt, Sparkles, Sun } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { Alert, Pressable, View } from 'react-native';
 import { TabBar } from '../src/components/TabBar';
@@ -80,6 +80,8 @@ export default function Profile() {
     setWallet,
     themeMode,
     setThemeMode,
+    savedEns,
+    activity,
   } = useApp();
   const [loadingWallet, setLoadingWallet] = useState(false);
 
@@ -97,7 +99,7 @@ export default function Profile() {
   }, []);
 
   const created = listings.filter((l) => l.manifest.creator === 'william.eth');
-  const saved = listings.filter((l) => l.manifest.ensName.startsWith('split.'));
+  const saved = listings.filter((l) => savedEns.includes(l.manifest.ensName));
 
   const copyAddress = async () => {
     if (!wallet) return;
@@ -207,6 +209,29 @@ export default function Profile() {
           )}
         </View>
 
+        <SectionHeader title="Shortcuts" size={17} />
+        <View style={{ gap: 8 }}>
+          <ListRow
+            icon={
+              <View
+                style={{
+                  width: 38,
+                  height: 38,
+                  borderRadius: 19,
+                  backgroundColor: C.blueSoft,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Receipt size={16} color={C.blueLink} strokeWidth={2.2} />
+              </View>
+            }
+            title="Activity"
+            sub={activity.length ? `${activity.length} receipts` : 'Your receipts from dapp runs'}
+            onPress={() => router.push('/activity')}
+          />
+        </View>
+
         <SectionHeader title="Settings" size={17} />
         <View style={{ backgroundColor: C.surface, borderRadius: 20, padding: 16 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -287,6 +312,11 @@ export default function Profile() {
               onPress={() => router.push(`/detail/${l.manifest.ensName}`)}
             />
           ))}
+          {saved.length === 0 && (
+            <Txt size={13} color={C.text3} style={{ paddingHorizontal: 4 }}>
+              Tap the heart on any dapp detail page to save it here.
+            </Txt>
+          )}
         </View>
 
         <SectionHeader title="Agent fleet" size={17} />

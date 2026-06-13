@@ -13,48 +13,53 @@ export type UiMessage =
   | { kind: 'activity'; label: string }
   | { kind: 'card' };
 
-const THEME_KEY = 'dappdock.theme';
-const LOYALTY_KEY = 'dappdock.loyalty';
+const KEYS = {
+  theme: 'dappdock.theme',
+  loyalty: 'dappdock.loyalty',
+  activity: 'dappdock.activity',
+  saved: 'dappdock.saved',
+  listings: 'dappdock.listings',
+};
 
 /** Per-dapp loyalty pass: stamps toward the current reward, lifetime points, rewards claimed. */
 export type LoyaltyRecord = { punches: number; points: number; redeemed: number };
+
+/** A single entry in the user's activity / receipts feed. */
+export type ActivityEntry = {
+  id: string;
+  ens: string;
+  title: string;
+  kind: 'purchase' | 'redeem' | 'review' | 'send' | 'receive';
+  amountUsd?: number;
+  points?: number;
+  note?: string;
+  ts: number;
+  live?: boolean;
+  explorerUrl?: string;
+};
 
 /** Demo head-start so the punch card isn't empty on first open. */
 const LOYALTY_SEED: Record<string, LoyaltyRecord> = {
   'burgerblock.dappdock.eth': { punches: 7, points: 6450, redeemed: 2 },
 };
 
-async function persistTheme(mode: ThemeMode) {
+async function persistJSON(key: string, value: unknown) {
   try {
-    if (Platform.OS === 'web') localStorage.setItem(THEME_KEY, mode);
-    else await SecureStore.setItemAsync(THEME_KEY, mode);
+    const json = JSON.stringify(value);
+    if (Platform.OS === 'web') localStorage.setItem(key, json);
+    else await SecureStore.setItemAsync(key, json);
   } catch {
-    // non-fatal: theme just won't persist
+    // non-fatal: this slice just won't persist
   }
 }
 
-async function persistLoyalty(loyalty: Record<string, LoyaltyRecord>) {
+async function loadJSON<T>(key: string): Promise<T | null> {
   try {
-    const json = JSON.stringify(loyalty);
-    if (Platform.OS === 'web') localStorage.setItem(LOYALTY_KEY, json);
-    else await SecureStore.setItemAsync(LOYALTY_KEY, json);
+    const raw =
+      Platform.OS === 'web' ? localStorage.getItem(key) : await SecureStore.getItemAsync(key);
+    return raw ? (JSON.parse(raw) as T) : null;
   } catch {
-    // non-fatal: stamps just won't persist
-  }
-}
-
-/** Restore saved loyalty passes; called from _layout alongside the theme. */
-export async function loadLoyaltyState() {
-  try {
-    const saved =
-      Platform.OS === 'web'
-        ? localStorage.getItem(LOYALTY_KEY)
-        : await SecureStore.getItemAsync(LOYALTY_KEY);
-    if (saved) {
-      useApp.setState({ loyalty: { ...LOYALTY_SEED, ...JSON.parse(saved) } });
-    }
-  } catch {
-    // keep seed
+    return null;
   }
 }
 
@@ -63,8 +68,8 @@ export async function loadThemePreference() {
   try {
     const saved =
       Platform.OS === 'web'
-        ? localStorage.getItem(THEME_KEY)
-        : await SecureStore.getItemAsync(THEME_KEY);
+        ? localStorage.getItem(KEYS.theme)
+        : await SecureStore.getItemAsync(KEYS.theme);
     if (saved === 'dark' || saved === 'light') {
       setActivePalette(saved);
       useApp.setState({ themeMode: saved });
@@ -74,40 +79,60 @@ export async function loadThemePreference() {
   }
 }
 
+/**
+ * Restore persisted slices (loyalty, activity, saved, user listings).
+ * Theme is restored separately so its palette side-effect runs before first paint.
+ */
+export async function loadPersistedState() {
+  const [loyalty, activity, savedEns, userListings] = await Promise.all([
+    loadJSON<Record<string, LoyaltyRecord>>(KEYS.loyalty),
+    loadJSON<ActivityEntry[]>(KEYS.activity),
+    loadJSON<string[]>(KEYS.saved),
+    loadJSON<DappListing[]>(KEYS.listings),
+  ]);
+  const patch: Partial<AppState> = {};
+  if (loyalty) patch.loyalty = { ...LOYALTY_SEED, ...loyalty };
+  if (activity) patch.activity = activity;
+  if (savedEns) patch.savedEns = savedEns;
+  if (userListings && userListings.length) {
+    patch.userListings = userListings;
+    patch.listings = [...userListings, ...SEED_LISTINGS];
+  }
+  if (Object.keys(patch).length) useApp.setState(patch);
+}
+
+/** @deprecated use loadPersistedState — kept so older call sites still compile during migration */
+export async function loadLoyaltyState() {
+  await loadPersistedState();
+}
+
 type AppState = {
-  // appearance
   themeMode: ThemeMode;
   setThemeMode: (mode: ThemeMode) => void;
-
-  // session / World ID
   verified: boolean;
   verifiedSimulated: boolean;
   setVerified: (v: { verified: boolean; simulated: boolean }) => void;
-
-  // embedded wallet
   wallet: WalletSnapshot | null;
   setWallet: (w: WalletSnapshot) => void;
-
-  // loyalty passes (punch cards / points per dapp)
   loyalty: Record<string, LoyaltyRecord>;
   addStamp: (ens: string, points: number) => void;
   redeemReward: (ens: string, cardSize: number) => void;
-
-  // store catalogue
+  activity: ActivityEntry[];
+  recordActivity: (e: Omit<ActivityEntry, 'id' | 'ts'>) => void;
+  savedEns: string[];
+  toggleSave: (ens: string) => void;
+  isSaved: (ens: string) => boolean;
   listings: DappListing[];
+  userListings: DappListing[];
   builderCredits: number;
   publishedCount: number;
   addListing: (l: DappListing) => void;
   markPublished: () => void;
-
-  // agent conversation
   apiHistory: ApiMessage[];
   messages: UiMessage[];
   agentBusy: boolean;
   pushMessage: (m: UiMessage) => void;
   setAgentBusy: (b: boolean) => void;
-
-  // generated draft
   draft: DappManifest | null;
   draftPublishedLive: boolean;
   simulation: SimulationResult | null;
@@ -120,7 +145,7 @@ export const useApp = create<AppState>((set, get) => ({
   themeMode: 'light',
   setThemeMode: (mode) => {
     setActivePalette(mode);
-    persistTheme(mode);
+    persistJSON(KEYS.theme, mode);
     set({ themeMode: mode });
   },
 
@@ -138,7 +163,7 @@ export const useApp = create<AppState>((set, get) => ({
       ...get().loyalty,
       [ens]: { ...prev, punches: prev.punches + 1, points: prev.points + points },
     };
-    persistLoyalty(loyalty);
+    persistJSON(KEYS.loyalty, loyalty);
     set({ loyalty });
   },
   redeemReward: (ens, cardSize) => {
@@ -147,14 +172,40 @@ export const useApp = create<AppState>((set, get) => ({
       ...get().loyalty,
       [ens]: { ...prev, punches: Math.max(0, prev.punches - cardSize), redeemed: prev.redeemed + 1 },
     };
-    persistLoyalty(loyalty);
+    persistJSON(KEYS.loyalty, loyalty);
     set({ loyalty });
   },
 
+  activity: [],
+  recordActivity: (e) => {
+    const entry: ActivityEntry = {
+      id: `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`,
+      ts: Date.now(),
+      ...e,
+    };
+    const activity = [entry, ...get().activity].slice(0, 100);
+    persistJSON(KEYS.activity, activity);
+    set({ activity });
+  },
+
+  savedEns: [],
+  toggleSave: (ens) => {
+    const cur = get().savedEns;
+    const savedEns = cur.includes(ens) ? cur.filter((x) => x !== ens) : [ens, ...cur];
+    persistJSON(KEYS.saved, savedEns);
+    set({ savedEns });
+  },
+  isSaved: (ens) => get().savedEns.includes(ens),
+
   listings: SEED_LISTINGS,
+  userListings: [],
   builderCredits: 3,
   publishedCount: 0,
-  addListing: (l) => set({ listings: [l, ...get().listings] }),
+  addListing: (l) => {
+    const userListings = [l, ...get().userListings];
+    persistJSON(KEYS.listings, userListings);
+    set({ userListings, listings: [l, ...get().listings] });
+  },
   markPublished: () =>
     set({ builderCredits: get().builderCredits - 1, publishedCount: get().publishedCount + 1 }),
 
@@ -177,7 +228,22 @@ export function findListing(ens: string | undefined): DappListing {
   return listings.find((l) => l.manifest.ensName === ens) ?? listings[0];
 }
 
-/** Wrap a freshly drafted manifest as a store listing once published. */
+/** Pure store search: match query against name/description/category/creator/one-liner. */
+export function filterListings(listings: DappListing[], query: string): DappListing[] {
+  const q = query.trim().toLowerCase();
+  if (!q) return listings;
+  return listings.filter((l) => {
+    const m = l.manifest;
+    return (
+      m.name.toLowerCase().includes(q) ||
+      m.description.toLowerCase().includes(q) ||
+      m.category.toLowerCase().includes(q) ||
+      m.creator.toLowerCase().includes(q) ||
+      l.oneLiner.toLowerCase().includes(q)
+    );
+  });
+}
+
 export function listingFromManifest(manifest: DappManifest): DappListing {
   const monogram = manifest.name
     .split(/\s+/)

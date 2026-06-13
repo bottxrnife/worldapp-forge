@@ -1,4 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Heart } from 'lucide-react-native';
 import React from 'react';
 import { Alert, Pressable, View } from 'react-native';
 import { BackButton, Chip, IconTile, PrimaryButton, Screen, Txt } from '../../src/components/ui';
@@ -19,6 +20,8 @@ export default function Detail() {
   useApp((s) => s.themeMode); // repaint on theme toggle
   const listing = findListing(ens);
   const m = listing.manifest;
+  const isSaved = useApp((s) => s.isSaved(m.ensName));
+  const toggleSave = useApp((s) => s.toggleSave);
 
   const showTechnical = () =>
     Alert.alert(
@@ -35,11 +38,21 @@ export default function Detail() {
     <Screen>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
         <BackButton onPress={() => (router.canGoBack() ? router.back() : router.replace('/store'))} />
-        <Pressable onPress={showTechnical}>
-          <Txt size={13} w={600} color={C.text2}>
-            View technical details
-          </Txt>
-        </Pressable>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+          <Pressable onPress={() => toggleSave(m.ensName)} hitSlop={8}>
+            <Heart
+              size={20}
+              color={isSaved ? C.danger : C.text3}
+              fill={isSaved ? C.danger : 'transparent'}
+              strokeWidth={2.2}
+            />
+          </Pressable>
+          <Pressable onPress={showTechnical}>
+            <Txt size={13} w={600} color={C.text2}>
+              View technical details
+            </Txt>
+          </Pressable>
+        </View>
       </View>
 
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, marginTop: 18 }}>
