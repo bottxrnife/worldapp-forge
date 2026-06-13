@@ -20,6 +20,7 @@ const KEYS = {
   saved: 'dappdock.saved',
   listings: 'dappdock.listings',
   reviews: 'dappdock.reviews',
+  redpackets: 'dappdock.redpackets',
 };
 
 /** Per-dapp loyalty pass: stamps toward the current reward, lifetime points, rewards claimed. */
@@ -41,6 +42,48 @@ export type ActivityEntry = {
   live?: boolean;
   explorerUrl?: string;
 };
+
+
+/** A lucky-money / red packet: a pool split into N shares, one claim per human. */
+export type RedPacket = {
+  id: string;
+  from: string;
+  totalUsd: number;
+  count: number;
+  split: 'equal' | 'lucky';
+  shares: number[];
+  claims: Array<{ nullifier: string; amountUsd: number; ts: number }>;
+  createdTs: number;
+};
+
+function computeShares(totalUsd: number, count: number, split: 'equal' | 'lucky'): number[] {
+  const cents = Math.round(totalUsd * 100);
+  if (split === 'equal') {
+    const base = Math.floor(cents / count);
+    const shares = Array(count).fill(base);
+    let rem = cents - base * count;
+    for (let i = 0; rem > 0; i++, rem--) shares[i % count] += 1;
+    return shares.map((c) => c / 100);
+  }
+  const shares: number[] = [];
+  let remaining = cents;
+  for (let i = 0; i < count; i++) {
+    const left = count - i;
+    if (left === 1) {
+      shares.push(remaining);
+      break;
+    }
+    const max = remaining - (left - 1);
+    const amt = Math.max(1, Math.floor(Math.random() * ((max / left) * 2)) + 1);
+    shares.push(amt);
+    remaining -= amt;
+  }
+  for (let i = shares.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shares[i], shares[j]] = [shares[j], shares[i]];
+  }
+  return shares.map((c) => c / 100);
+}
 
 /** Demo head-start so the punch card isn't empty on first open. */
 const LOYALTY_SEED: Record<string, LoyaltyRecord> = {
@@ -88,18 +131,20 @@ export async function loadThemePreference() {
  * Theme is restored separately so its palette side-effect runs before first paint.
  */
 export async function loadPersistedState() {
-  const [loyalty, activity, savedEns, userListings, reviews] = await Promise.all([
+  const [loyalty, activity, savedEns, userListings, reviews, redPackets] = await Promise.all([
     loadJSON<Record<string, LoyaltyRecord>>(KEYS.loyalty),
     loadJSON<ActivityEntry[]>(KEYS.activity),
     loadJSON<string[]>(KEYS.saved),
     loadJSON<DappListing[]>(KEYS.listings),
     loadJSON<Record<string, Review[]>>(KEYS.reviews),
+    loadJSON<Record<string, RedPacket>>(KEYS.redpackets),
   ]);
   const patch: Partial<AppState> = {};
   if (loyalty) patch.loyalty = { ...LOYALTY_SEED, ...loyalty };
   if (activity) patch.activity = activity;
   if (savedEns) patch.savedEns = savedEns;
   if (reviews) patch.reviews = reviews;
+  if (redPackets) patch.redPackets = redPackets;
   if (userListings && userListings.length) {
     patch.userListings = userListings;
     patch.listings = [...userListings, ...SEED_LISTINGS];
@@ -132,6 +177,18 @@ type AppState = {
   isSaved: (ens: string) => boolean;
   reviews: Record<string, Review[]>;
   submitReview: (ens: string, r: Review) => void;
+
+  redPackets: Record<string, RedPacket>;
+  createRedPacket: (opts: {
+    from: string;
+    totalUsd: number;
+    count: number;
+    split: 'equal' | 'lucky';
+  }) => string;
+  claimRedPacket: (
+    id: string,
+    nullifier: string,
+  ) => { ok: true; amountUsd: number } | { ok: false; reason: 'not_found' | 'already' | 'empty' };
   listings: DappListing[];
   userListings: DappListing[];
   builderCredits: number;
@@ -232,6 +289,42 @@ export const useApp = create<AppState>((set, get) => ({
     const reviews = { ...get().reviews, [ens]: next };
     persistJSON(KEYS.reviews, reviews);
     set({ reviews });
+  },
+
+
+  redPackets: {},
+  createRedPacket: ({ from, totalUsd, count, split }) => {
+    const id = Math.random().toString(36).slice(2, 8);
+    const safeCount = Math.max(1, Math.min(Math.round(count), Math.round(totalUsd * 100)));
+    const packet: RedPacket = {
+      id,
+      from,
+      totalUsd,
+      count: safeCount,
+      split,
+      shares: computeShares(totalUsd, safeCount, split),
+      claims: [],
+      createdTs: Date.now(),
+    };
+    const redPackets = { ...get().redPackets, [id]: packet };
+    persistJSON(KEYS.redpackets, redPackets);
+    set({ redPackets });
+    return id;
+  },
+  claimRedPacket: (id, nullifier) => {
+    const packet = get().redPackets[id];
+    if (!packet) return { ok: false, reason: 'not_found' };
+    if (packet.claims.some((c) => c.nullifier === nullifier)) return { ok: false, reason: 'already' };
+    if (packet.claims.length >= packet.count) return { ok: false, reason: 'empty' };
+    const amountUsd = packet.shares[packet.claims.length];
+    const updated: RedPacket = {
+      ...packet,
+      claims: [...packet.claims, { nullifier, amountUsd, ts: Date.now() }],
+    };
+    const redPackets = { ...get().redPackets, [id]: updated };
+    persistJSON(KEYS.redpackets, redPackets);
+    set({ redPackets });
+    return { ok: true, amountUsd };
   },
 
   listings: SEED_LISTINGS,

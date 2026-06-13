@@ -6,6 +6,7 @@ import {
   Check,
   DollarSign,
   Gift,
+  PartyPopper,
   MoreHorizontal,
   Sparkles,
   Users,
@@ -194,6 +195,7 @@ export default function Home() {
         {/* quick actions — every tile opens a real dapp or a store category */}
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 14 }}>
           <QuickTile icon={icon(DollarSign)} label="Pay" onPress={() => router.push('/detail/hackdues.dappdock.eth')} />
+          <QuickTile icon={icon(PartyPopper, 15)} label="Lucky" onPress={() => router.push('/redpacket/new')} />
           <QuickTile icon={icon(ArrowLeftRight)} label="Swap" onPress={() => router.push('/detail/swap.dappdock.eth')} />
           <QuickTile icon={icon(Check)} label="Vote" onPress={() => router.push('/detail/daovote.dappdock.eth')} />
           <QuickTile icon={icon(ArrowUp)} label="Fundraise" onPress={() => router.push('/detail/fundraise.dappdock.eth')} />
