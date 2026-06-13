@@ -95,7 +95,7 @@ const TOOLS = [
         components: {
           type: 'array',
           description:
-            'UI components. Types: amountInput {token, default, locked}, sourceChain {value:"any"}, recipient {value: ens-or-address}, memoInput {default}, punchCard {total, reward, pointsPerDollar} for loyalty/rewards dapps, submitButton {label}. Must include a submitButton.',
+            'UI components. Types: amountInput {token, default, locked}, sourceChain {value:"any"}, recipient {value: ens-or-address}, memoInput {default}, punchCard {total, reward, pointsPerDollar} for loyalty/rewards dapps, menu {currency, items:[{id,name,priceUsd,desc?,tag?}]} for in-app ordering, submitButton {label}. Must include a submitButton.',
           items: { type: 'object' },
         },
         permissions: {
@@ -134,6 +134,8 @@ Your skills (each maps to a manifest pattern):
 - Token-gating / membership: recipient = community treasury, World ID one-per-human join.
 - Event check-in / ticket claim: no spend; worldPolicy "one-claim-per-human".
 - Loyalty / rewards (cafés, fast food, shops): punchCard {total, reward, pointsPerDollar} + the payment components; each purchase stamps the card and earns points, a full card redeems the reward for free; requiresWorldId with worldPolicy "one-card-per-human" so stamps can't be farmed.
+- Restaurant ordering: menu {currency, items} + sourceChain("any") + recipient(restaurant treasury) + submitButton; the user builds a cart in-app and the total settles via LI.FI. Pair with a punchCard so each order also earns points. No fixed amountInput — the cart is the amount.
+- Everyday payments (parking, transit top-up, donations / round-up, savings circles): an editable amountInput (locked:false) + sourceChain("any") + recipient + submitButton; always cap the amount. Use requiresWorldId only when one-per-human matters (supporter walls, savings circles, raffles).
 - Agent tools: small paid tasks, human-backed agents; spending always capped.
 
 Hard product rules (never break):

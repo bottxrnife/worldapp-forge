@@ -9,7 +9,7 @@ export type ValidationResult =
   | { ok: true; manifest: DappManifest; warnings: string[] }
   | { ok: false; errors: string[] };
 
-const COMPONENT_TYPES = ['amountInput', 'sourceChain', 'recipient', 'memoInput', 'punchCard', 'submitButton'];
+const COMPONENT_TYPES = ['amountInput', 'sourceChain', 'recipient', 'memoInput', 'punchCard', 'menu', 'submitButton'];
 const CATEGORIES = ['Finance', 'Community', 'Agents', 'Events', 'Tools'];
 
 export function validateManifest(input: any): ValidationResult {
@@ -41,6 +41,23 @@ export function validateManifest(input: any): ValidationResult {
   }
   if (!components.some((c: any) => c?.type === 'submitButton')) {
     errors.push('components must include a submitButton');
+  }
+  // per-type shape — the runtime reads these fields directly, so guard them here
+  for (const c of components) {
+    if (c?.type === 'punchCard') {
+      if (typeof c.total !== 'number' || c.total <= 0 || !c.reward || typeof c.pointsPerDollar !== 'number') {
+        errors.push('punchCard needs a positive total, a reward, and a numeric pointsPerDollar');
+      }
+    }
+    if (c?.type === 'menu') {
+      const items = Array.isArray(c.items) ? c.items : [];
+      if (items.length === 0) errors.push('menu must list at least one item');
+      else if (items.some((it: any) => !it?.id || !it?.name || typeof it?.priceUsd !== 'number')) {
+        errors.push('every menu item needs an id, a name, and a numeric priceUsd');
+      } else if (new Set(items.map((it: any) => it.id)).size !== items.length) {
+        errors.push('menu item ids must be unique');
+      }
+    }
   }
 
   // permissions

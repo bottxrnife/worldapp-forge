@@ -125,7 +125,8 @@ async function pollLifiStatus(txHash: string, fromChain: number, toChain: number
  */
 export async function runFlow(
   manifest: DappManifest,
-  onStep: (step: number) => void
+  onStep: (step: number) => void,
+  overrides?: { amountUsd?: number; recipient?: string }
 ): Promise<ExecutionResult> {
   const amountComponent = manifest.components.find((c) => c.type === 'amountInput') as
     | { default: string }
@@ -133,8 +134,8 @@ export async function runFlow(
   const recipientComponent = manifest.components.find((c) => c.type === 'recipient') as
     | { value: string }
     | undefined;
-  const amount = parseFloat(amountComponent?.default ?? '5');
-  const recipientName = recipientComponent?.value ?? 'team.eth';
+  const amount = overrides?.amountUsd ?? parseFloat(amountComponent?.default ?? '5');
+  const recipientName = overrides?.recipient ?? recipientComponent?.value ?? 'team.eth';
 
   const snapshot = await getWalletSnapshot().catch(() => null);
   const funded = snapshot?.balances.find((b) => b.usdc >= amount && b.native > 0);

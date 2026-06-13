@@ -17,6 +17,11 @@ export type DappManifest = {
     | { type: 'recipient'; value: string }
     | { type: 'memoInput'; default: string }
     | { type: 'punchCard'; total: number; reward: string; pointsPerDollar: number }
+    | {
+        type: 'menu';
+        currency: string;
+        items: Array<{ id: string; name: string; priceUsd: number; desc?: string; tag?: string }>;
+      }
     | { type: 'submitButton'; label: string }
   >;
   outcome: string;

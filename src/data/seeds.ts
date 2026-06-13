@@ -88,6 +88,103 @@ function simpleManifest(p: {
   };
 }
 
+/** Variable-amount payment dapp: amountInput (optionally editable) + recipient. */
+function payManifest(p: {
+  name: string;
+  ensName: string;
+  creator: string;
+  description: string;
+  category: string;
+  outcome: string;
+  permissions: string[];
+  cap: string;
+  worldId: boolean;
+  recipient: string;
+  amountDefault: string;
+  locked?: boolean;
+  memoDefault?: string;
+  steps: Array<[string, string]>;
+  submit: string;
+}): DappManifest {
+  const components: DappManifest['components'] = [
+    { type: 'amountInput', token: 'USDC', default: p.amountDefault, locked: p.locked },
+    { type: 'sourceChain', value: 'any' },
+    { type: 'recipient', value: p.recipient },
+  ];
+  if (p.memoDefault !== undefined) components.push({ type: 'memoInput', default: p.memoDefault });
+  components.push({ type: 'submitButton', label: p.submit });
+  return {
+    name: p.name,
+    ensName: p.ensName,
+    creator: p.creator,
+    description: p.description,
+    category: p.category,
+    components,
+    outcome: p.outcome,
+    permissions: {
+      plainEnglish: p.permissions,
+      spendingCap: p.cap,
+      requiresConfirmation: true,
+      requiresWorldId: p.worldId,
+    },
+    workflow: {
+      provider: 'LI.FI Composer',
+      flowId: 'flow_' + p.ensName.split('.')[0],
+      steps: p.steps.map(([label, detail], i) => ({ id: 's' + i, label, detail })),
+      simulated: true,
+    },
+    trust: { ensVerified: true, worldVerifiedCreator: p.worldId, simulated: true, openSource: true },
+    ensTextRecords: { 'dapp.category': p.category, 'dapp.version': '1.0.0' },
+    version: '1.0.0',
+  };
+}
+
+/** Café loyalty pass — same shape as Burger Block, different brand. */
+export const CAFE_MANIFEST: DappManifest = {
+  name: 'Bean Counter Café',
+  ensName: 'beancounter.dappdock.eth',
+  creator: 'beancounter.creator.eth',
+  description:
+    'Buy your coffee in USDC from any chain and stamp your card — 8 cups earns a free latte, and every dollar earns points.',
+  category: 'Finance',
+  secondaryCategory: 'Community',
+  components: [
+    { type: 'punchCard', total: 8, reward: 'Latte', pointsPerDollar: 100 },
+    { type: 'amountInput', token: 'USDC', default: '5', locked: true },
+    { type: 'sourceChain', value: 'any' },
+    { type: 'recipient', value: 'beancounter.eth' },
+    { type: 'memoInput', default: 'Oat flat white' },
+    { type: 'submitButton', label: 'Pay $5 & collect a stamp' },
+  ],
+  outcome: 'You will pay $5 for your coffee and collect one loyalty stamp.',
+  permissions: {
+    plainEnglish: ['Read your wallet balance', 'Route one USDC payment via LI.FI', 'Stamp your card and add points'],
+    spendingCap: '5 USDC',
+    requiresConfirmation: true,
+    requiresWorldId: true,
+    worldPolicy: 'one-card-per-human',
+  },
+  workflow: {
+    provider: 'LI.FI Composer',
+    flowId: 'flow_beancounter',
+    steps: [
+      { id: 'source', label: 'Source $5 USDC from your wallet', detail: 'Any chain — no bridging needed by you' },
+      { id: 'route', label: 'Route payment via LI.FI', detail: 'Best route selected automatically' },
+      { id: 'settle', label: 'Settle to beancounter.eth', detail: 'The barista is notified' },
+      { id: 'stamp', label: 'Stamp your card', detail: '+1 stamp and +500 points saved' },
+    ],
+    simulated: true,
+  },
+  trust: { ensVerified: true, worldVerifiedCreator: true, simulated: true, openSource: true },
+  ensTextRecords: {
+    'dapp.category': 'Finance',
+    'dapp.version': '1.0.0',
+    'world.policy': 'one-card-per-human',
+    'lifi.flow': 'flow_beancounter',
+  },
+  version: '1.0.0',
+};
+
 /** Fast-food loyalty pass: pay for a meal, collect a stamp + points; 10 stamps = free burger. */
 export const BURGERBLOCK_MANIFEST: DappManifest = {
   name: 'Burger Block Rewards',
@@ -138,6 +235,81 @@ export const BURGERBLOCK_MANIFEST: DappManifest = {
   version: '1.0.0',
 };
 
+/** Restaurant ordering: build a cart in-app, pay the total via LI.FI, earn points. */
+export const BISTRO_MANIFEST: DappManifest = {
+  name: 'Corner Bistro — Order & Pay',
+  ensName: 'bistro.dappdock.eth',
+  creator: 'cornerbistro.creator.eth',
+  description:
+    'Open the menu, build your order, and pay the total in USDC from any chain — the kitchen is notified instantly and every dollar earns loyalty points toward a free meal.',
+  category: 'Finance',
+  secondaryCategory: 'Community',
+  components: [
+    { type: 'punchCard', total: 8, reward: 'Signature Burger', pointsPerDollar: 100 },
+    {
+      type: 'menu',
+      currency: 'USDC',
+      items: [
+        { id: 'smash', name: 'Signature Smash Burger', priceUsd: 11, desc: 'Double patty, house sauce', tag: 'Mains' },
+        { id: 'chicken', name: 'Crispy Chicken Sandwich', priceUsd: 10, desc: 'Buttermilk-fried, pickles', tag: 'Mains' },
+        { id: 'veg', name: 'Garden Halloumi Wrap', priceUsd: 9, desc: 'Grilled halloumi, slaw', tag: 'Mains' },
+        { id: 'fries', name: 'Truffle Fries', priceUsd: 5, desc: 'Parmesan, herbs', tag: 'Sides' },
+        { id: 'rings', name: 'Onion Rings', priceUsd: 4.5, tag: 'Sides' },
+        { id: 'shake', name: 'Salted Caramel Shake', priceUsd: 6, tag: 'Drinks' },
+        { id: 'lemonade', name: 'House Lemonade', priceUsd: 3.5, tag: 'Drinks' },
+        { id: 'coffee', name: 'Cold Brew', priceUsd: 4, tag: 'Drinks' },
+      ],
+    },
+    { type: 'sourceChain', value: 'any' },
+    { type: 'recipient', value: 'bistro.eth' },
+    { type: 'submitButton', label: 'Place order & pay' },
+  ],
+  outcome: 'You will pay your order total and the kitchen starts preparing it.',
+  permissions: {
+    plainEnglish: [
+      'Read your wallet balance',
+      'Route one USDC payment via LI.FI',
+      'Send your order to the kitchen and add loyalty points',
+    ],
+    spendingCap: '80 USDC',
+    requiresConfirmation: true,
+    requiresWorldId: true,
+    worldPolicy: 'one-card-per-human',
+  },
+  workflow: {
+    provider: 'LI.FI Composer',
+    flowId: 'flow_bistro',
+    steps: [
+      { id: 'confirm', label: 'Confirm your order', detail: 'Your cart and total, up front' },
+      { id: 'source', label: 'Source the total from your wallet', detail: 'Any chain — no bridging needed by you' },
+      { id: 'route', label: 'Route payment via LI.FI', detail: 'Settles to bistro.eth' },
+      { id: 'kitchen', label: 'Notify the kitchen & stamp your card', detail: 'Order in, points + stamp saved' },
+    ],
+    simulated: true,
+  },
+  trust: { ensVerified: true, worldVerifiedCreator: true, simulated: true, openSource: true },
+  ensTextRecords: {
+    'dapp.category': 'Finance',
+    'dapp.version': '1.0.0',
+    'world.policy': 'one-card-per-human',
+    'lifi.flow': 'flow_bistro',
+  },
+  version: '1.0.0',
+};
+
+/** Points-marketplace catalogue: spend accrued points on per-merchant perks. */
+export type PointsReward = { ens: string; label: string; cost: number; emoji: string };
+
+export const POINTS_REWARDS: PointsReward[] = [
+  { ens: 'burgerblock.dappdock.eth', label: '$2 off your order', cost: 800, emoji: '🏷️' },
+  { ens: 'burgerblock.dappdock.eth', label: 'Free fries', cost: 1200, emoji: '🍟' },
+  { ens: 'burgerblock.dappdock.eth', label: 'Free milkshake', cost: 2000, emoji: '🥤' },
+  { ens: 'burgerblock.dappdock.eth', label: 'Free Classic Smash Burger', cost: 4000, emoji: '🍔' },
+  { ens: 'bistro.dappdock.eth', label: 'Free truffle fries', cost: 1000, emoji: '🍟' },
+  { ens: 'bistro.dappdock.eth', label: 'Free cold brew', cost: 900, emoji: '☕️' },
+  { ens: 'bistro.dappdock.eth', label: 'Free Signature Burger', cost: 3500, emoji: '🍔' },
+];
+
 export const SEED_LISTINGS: DappListing[] = [
   {
     manifest: HACKDUES_MANIFEST,
@@ -161,6 +333,179 @@ export const SEED_LISTINGS: DappListing[] = [
     reviews: 486,
     featured: true,
     section: 'humans',
+  },
+  {
+    manifest: BISTRO_MANIFEST,
+    monogram: 'CB',
+    runtimeTitle: 'Corner Bistro — Order & Pay',
+    oneLiner: 'Order in-app, pay any chain, earn points.',
+    rating: 4.8,
+    runs: 1740,
+    reviews: 263,
+    featured: true,
+    section: 'humans',
+  },
+  {
+    manifest: CAFE_MANIFEST,
+    monogram: 'BC',
+    runtimeTitle: 'Bean Counter Café',
+    oneLiner: 'Coffee loyalty — 8 cups = free latte.',
+    rating: 4.8,
+    runs: 920,
+    reviews: 140,
+    section: 'humans',
+  },
+  {
+    manifest: payManifest({
+      name: 'Charity Round-Up',
+      ensName: 'roundup.dappdock.eth',
+      creator: 'givewell.creator.eth',
+      description: 'Round up to a clean number and donate the difference to a verified cause.',
+      category: 'Community',
+      outcome: 'You will donate your chosen amount to the cause.',
+      permissions: ['Read your wallet balance', 'Route one USDC donation via LI.FI', 'Add you to the supporter wall'],
+      cap: '25 USDC',
+      worldId: true,
+      recipient: 'cause.eth',
+      amountDefault: '2',
+      locked: false,
+      memoDefault: 'Spare-change round-up',
+      steps: [
+        ['Choose your donation', 'Any amount up to the cap'],
+        ['Route funds via LI.FI', 'Best route selected automatically'],
+        ['Settle to the cause treasury', 'Single arrival transaction'],
+        ['Join the supporter wall', 'One entry per verified human'],
+      ],
+      submit: 'Donate',
+    }),
+    monogram: 'RU',
+    runtimeTitle: 'Charity Round-Up',
+    oneLiner: 'Round up, give the change.',
+    rating: 4.7,
+    runs: 410,
+    reviews: 73,
+    section: 'humans',
+  },
+  {
+    manifest: simpleManifest({
+      name: 'Community Raffle',
+      ensName: 'raffle.dappdock.eth',
+      creator: 'fairdraw.creator.eth',
+      description: 'Enter a transparent raffle — one entry per verified human.',
+      category: 'Events',
+      outcome: 'You will enter the raffle. One entry per verified human.',
+      permissions: ['Check your World ID verification', 'Record your single entry'],
+      cap: '$0.00',
+      worldId: true,
+      steps: [
+        ['Verify you are human', 'World ID proof, nothing else shared'],
+        ['Enter the draw', 'One entry per verified human'],
+        ['Wait for the draw', 'Winners picked transparently'],
+        ['See the result', 'Saved to the raffle ledger'],
+      ],
+      submit: 'Enter raffle',
+    }),
+    monogram: 'RF',
+    runtimeTitle: 'Community Raffle',
+    oneLiner: 'One entry per verified human',
+    rating: 4.6,
+    runs: 1280,
+    reviews: 190,
+    section: 'humans',
+  },
+  {
+    manifest: payManifest({
+      name: 'Parking Meter',
+      ensName: 'parking.dappdock.eth',
+      creator: 'cityservices.creator.eth',
+      description: 'Pay for parking by the hour — scan the bay code and pay from any chain.',
+      category: 'Tools',
+      outcome: 'You will pay for your parking session.',
+      permissions: ['Read your wallet balance', 'Route one USDC payment via LI.FI'],
+      cap: '30 USDC',
+      worldId: false,
+      recipient: 'cityparking.eth',
+      amountDefault: '4',
+      locked: false,
+      memoDefault: 'Bay 27 · 2 hours',
+      steps: [
+        ['Confirm bay and duration', 'Loaded from the meter code'],
+        ['Source USDC from your wallet', 'Any chain — no bridging needed by you'],
+        ['Route payment via LI.FI', 'Settles to the city treasury'],
+        ['Start your session', 'Saved to your activity'],
+      ],
+      submit: 'Pay for parking',
+    }),
+    monogram: 'PK',
+    runtimeTitle: 'Parking Meter',
+    oneLiner: 'Pay by the hour, any chain',
+    rating: 4.5,
+    runs: 760,
+    reviews: 102,
+    recency: '5h ago',
+    section: 'recent',
+  },
+  {
+    manifest: payManifest({
+      name: 'Savings Circle',
+      ensName: 'savings.dappdock.eth',
+      creator: 'rosca.creator.eth',
+      description: 'Contribute to a rotating savings circle; the pot pays out to one member each round.',
+      category: 'Community',
+      outcome: 'You will contribute this round’s amount to the circle.',
+      permissions: ['Read your wallet balance', 'Route one USDC contribution via LI.FI', 'Record your contribution'],
+      cap: '50 USDC',
+      worldId: true,
+      recipient: 'circle.eth',
+      amountDefault: '20',
+      locked: false,
+      memoDefault: 'Round 3 contribution',
+      steps: [
+        ['Confirm this round', 'Your share and the payout member'],
+        ['Source USDC from your wallet', 'Any chain — no bridging needed by you'],
+        ['Route funds via LI.FI', 'Settles to the circle treasury'],
+        ['Record your contribution', 'One per verified human'],
+      ],
+      submit: 'Contribute',
+    }),
+    monogram: 'SC',
+    runtimeTitle: 'Savings Circle',
+    oneLiner: 'Rotating savings, transparent payouts',
+    rating: 4.7,
+    runs: 215,
+    reviews: 44,
+    section: 'humans',
+  },
+  {
+    manifest: payManifest({
+      name: 'Transit Top-Up',
+      ensName: 'transit.dappdock.eth',
+      creator: 'metro.creator.eth',
+      description: 'Top up your transit pass in seconds — pay from any chain, tap to ride.',
+      category: 'Tools',
+      outcome: 'You will top up your transit balance.',
+      permissions: ['Read your wallet balance', 'Route one USDC top-up via LI.FI', 'Add credit to your pass'],
+      cap: '40 USDC',
+      worldId: false,
+      recipient: 'metro.eth',
+      amountDefault: '10',
+      locked: false,
+      steps: [
+        ['Choose your top-up', 'Any amount up to the cap'],
+        ['Source USDC from your wallet', 'Any chain — no bridging needed by you'],
+        ['Route payment via LI.FI', 'Settles to the transit authority'],
+        ['Add credit to your pass', 'Tap to ride'],
+      ],
+      submit: 'Top up',
+    }),
+    monogram: 'TT',
+    runtimeTitle: 'Transit Top-Up',
+    oneLiner: 'Tap-to-ride, funded any chain',
+    rating: 4.6,
+    runs: 1340,
+    reviews: 205,
+    recency: '1d ago',
+    section: 'recent',
   },
   {
     manifest: simpleManifest({
@@ -466,16 +811,3 @@ export const SEED_LISTINGS: DappListing[] = [
     section: 'recent',
   },
 ];
-
-export type PointsReward = { ens: string; label: string; cost: number; emoji: string };
-
-export const POINTS_REWARDS: PointsReward[] = [
-  { ens: 'burgerblock.dappdock.eth', label: '$2 off your order', cost: 800, emoji: '🏷️' },
-  { ens: 'burgerblock.dappdock.eth', label: 'Free fries', cost: 1200, emoji: '🍟' },
-  { ens: 'burgerblock.dappdock.eth', label: 'Free milkshake', cost: 2000, emoji: '🥤' },
-  { ens: 'burgerblock.dappdock.eth', label: 'Free Classic Smash Burger', cost: 4000, emoji: '🍔' },
-  { ens: 'bistro.dappdock.eth', label: 'Free truffle fries', cost: 1000, emoji: '🍟' },
-  { ens: 'bistro.dappdock.eth', label: 'Free cold brew', cost: 900, emoji: '☕️' },
-  { ens: 'bistro.dappdock.eth', label: 'Free Signature Burger', cost: 3500, emoji: '🍔' },
-];
-
