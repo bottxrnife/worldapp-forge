@@ -1,26 +1,35 @@
 import { APP } from "./config";
 
+/** ENS label from a full name (`bistro.forge.eth` → `bistro`). */
+export function sparkLabel(ensName: string): string {
+  return ensName.split(".")[0].toLowerCase();
+}
+
 /** In-app route for a Spark run page. */
 export function sparkRunPath(ensName: string): string {
   return `/app/${encodeURIComponent(ensName)}`;
 }
 
 /**
+ * Short deeplink path for World App — no dots, no encoded slashes in the segment.
+ * `/go/bistro` server-redirects to `/app/bistro.forge.eth`.
+ */
+export function sparkGoPath(ensName: string): string {
+  return `/go/${sparkLabel(ensName)}`;
+}
+
+/**
  * World App universal link — opens Forge inside World App directly to this Spark.
- * Format: https://world.org/mini-app?app_id=…&path=%2Fapp%2F…
+ * Format: https://world.org/mini-app?app_id=…&path=%2Fgo%2Fbistro
  *
- * Path must be encoded exactly once (World docs). URLSearchParams already encodes,
- * so do not wrap the path in encodeURIComponent — that double-encodes and World App
- * loads /%2Fapp%2F… which Next.js 404s.
+ * Built manually per World docs (encode path once). Never use URLSearchParams.set
+ * after encodeURIComponent — that double-encodes to %252F and World App loads a 404.
  */
 export function sparkWorldAppUrl(ensName: string): string | null {
   const appId = APP.worldAppId;
   if (!appId.startsWith("app_")) return null;
-  const fullPath = sparkRunPath(ensName);
-  const url = new URL("https://world.org/mini-app");
-  url.searchParams.set("app_id", appId);
-  url.searchParams.set("path", fullPath.startsWith("/") ? fullPath : `/${fullPath}`);
-  return url.toString();
+  const path = sparkGoPath(ensName);
+  return `https://world.org/mini-app?app_id=${appId}&path=${encodeURIComponent(path)}`;
 }
 
 /** Best link to encode in a QR — World App deeplink when configured, else HTTPS. */
