@@ -3,11 +3,17 @@
  * `:root` (light) and `:root[data-theme="dark"]`. A tiny inline script in the
  * root layout applies the saved choice before paint (no flash); these helpers
  * keep it in sync when the user changes it in Profile.
+ *
+ * Dark and system modes are disabled until the UI is ready — only light is active.
  */
 export type ThemeMode = "light" | "dark" | "system";
 const KEY = "forge.theme";
 
+/** When false, Profile grays out dark/system and the app stays on light. */
+export const THEME_DARK_ENABLED = false;
+
 export function getThemeMode(): ThemeMode {
+  if (!THEME_DARK_ENABLED) return "light";
   if (typeof window === "undefined") return "system";
   try {
     const v = localStorage.getItem(KEY) as ThemeMode | null;
@@ -22,6 +28,7 @@ function prefersDark(): boolean {
 }
 
 export function isDark(mode: ThemeMode): boolean {
+  if (!THEME_DARK_ENABLED) return false;
   return mode === "dark" || (mode === "system" && prefersDark());
 }
 
@@ -31,10 +38,11 @@ export function applyTheme(mode: ThemeMode): void {
 }
 
 export function setThemeMode(mode: ThemeMode): void {
+  const effective: ThemeMode = THEME_DARK_ENABLED ? mode : "light";
   try {
-    localStorage.setItem(KEY, mode);
+    localStorage.setItem(KEY, effective);
   } catch {
     /* ignore */
   }
-  applyTheme(mode);
+  applyTheme(effective);
 }

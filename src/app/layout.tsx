@@ -33,7 +33,7 @@ export const viewport: Viewport = {
   themeColor: "#ffffff",
 };
 
-const THEME_SCRIPT = `(function(){try{var t=localStorage.getItem('forge.theme')||'system';var d=t==='dark'||(t==='system'&&window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.dataset.theme=d?'dark':'light';}catch(e){}})();`;
+const THEME_SCRIPT = `(function(){try{document.documentElement.dataset.theme='light';localStorage.setItem('forge.theme','light');}catch(e){}})();`;
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (

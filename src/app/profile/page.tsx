@@ -7,14 +7,14 @@ import { Button } from "@/components/ui";
 import { useAuth } from "@/lib/auth";
 import { APP } from "@/lib/config";
 import { getLoyalty } from "@/lib/store";
-import { getThemeMode, setThemeMode, type ThemeMode } from "@/lib/theme";
+import { getThemeMode, setThemeMode, THEME_DARK_ENABLED, type ThemeMode } from "@/lib/theme";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
-const THEME_OPTIONS: { mode: ThemeMode; label: string; icon: string }[] = [
+const THEME_OPTIONS: { mode: ThemeMode; label: string; icon: string; disabled?: boolean }[] = [
   { mode: "light", label: "Light", icon: "sun" },
-  { mode: "dark", label: "Dark", icon: "moon" },
-  { mode: "system", label: "System", icon: "monitor" },
+  { mode: "dark", label: "Dark", icon: "moon", disabled: !THEME_DARK_ENABLED },
+  { mode: "system", label: "System", icon: "monitor", disabled: !THEME_DARK_ENABLED },
 ];
 
 // Per-device state cleared by the "Clear local data" row.
@@ -24,7 +24,7 @@ export default function ProfilePage() {
   const { user, signOut } = useAuth();
   const [points, setPoints] = useState(0);
   const [passes, setPasses] = useState(0);
-  const [mode, setMode] = useState<ThemeMode>("system");
+  const [mode, setMode] = useState<ThemeMode>("light");
   const [notif, setNotif] = useState(false);
   const [cleared, setCleared] = useState(false);
 
@@ -41,6 +41,7 @@ export default function ProfilePage() {
   }, []);
 
   function selectTheme(m: ThemeMode) {
+    if (!THEME_DARK_ENABLED && m !== "light") return;
     setThemeMode(m);
     setMode(m);
   }
@@ -163,17 +164,30 @@ export default function ProfilePage() {
           <div className="mt-2 flex rounded-full bg-wash p-1">
             {THEME_OPTIONS.map((opt) => {
               const active = mode === opt.mode;
+              const disabled = opt.disabled;
               return (
                 <button
                   key={opt.mode}
+                  type="button"
+                  disabled={disabled}
                   onClick={() => selectTheme(opt.mode)}
                   aria-pressed={active}
-                  className={`flex flex-1 items-center justify-center gap-1.5 rounded-full py-2.5 text-[13px] font-bold transition active:scale-[0.97] ${
-                    active ? "bg-brand text-white shadow-soft" : "text-muted"
+                  aria-disabled={disabled}
+                  className={`flex flex-1 flex-col items-center justify-center gap-0.5 rounded-full py-2 text-[13px] font-bold transition ${
+                    disabled
+                      ? "cursor-not-allowed opacity-45 text-faint"
+                      : active
+                        ? "bg-brand text-white shadow-soft active:scale-[0.97]"
+                        : "text-muted active:scale-[0.97]"
                   }`}
                 >
-                  <Icon name={opt.icon} size={18} />
-                  {opt.label}
+                  <span className="flex items-center justify-center gap-1.5">
+                    <Icon name={opt.icon} size={18} />
+                    {opt.label}
+                  </span>
+                  {disabled ? (
+                    <span className="text-[9px] font-semibold uppercase tracking-wide text-faint">In development</span>
+                  ) : null}
                 </button>
               );
             })}

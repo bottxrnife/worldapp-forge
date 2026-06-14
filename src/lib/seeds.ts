@@ -331,7 +331,7 @@ export const SEED_APPS: DappManifest[] = [
         },
         {
           id: "shake",
-          name: "Salted Caramel Shake",
+          name: "Strawberry Shake",
           priceUsd: 6,
           tag: "Drinks",
           imageBlobId: BISTRO_WALRUS.items.shake,
@@ -821,7 +821,7 @@ export type PointsReward = { ens: string; label: string; cost: number };
 export const POINTS_REWARDS: PointsReward[] = [
   { ens: ens("bistro"), label: "Free truffle fries", cost: 1000 },
   { ens: ens("bistro"), label: "Free cold brew", cost: 900 },
-  { ens: ens("bistro"), label: "Free salted caramel shake", cost: 1400 },
+  { ens: ens("bistro"), label: "Free strawberry shake", cost: 1400 },
   { ens: ens("bistro"), label: "Free Signature Smash Burger", cost: 3500 },
   { ens: ens("burgerblock"), label: "$2 off your order", cost: 800 },
   { ens: ens("burgerblock"), label: "Free fries", cost: 1200 },
