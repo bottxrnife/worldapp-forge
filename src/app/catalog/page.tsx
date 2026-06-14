@@ -7,8 +7,9 @@ import { HumanBadgeSlot } from "@/components/ui";
 import type { AppRecord } from "@/lib/catalog";
 import { CATALOG_CHIPS, SPARK_CATEGORIES, type CatalogChip, type SparkCategory } from "@/lib/categories";
 import { resolveMySparkApps } from "@/lib/mySparks";
+import { useVisualViewportTop } from "@/lib/viewport";
 import Link from "next/link";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 const CHIPS = CATALOG_CHIPS;
 
@@ -56,6 +57,19 @@ export default function CatalogPage() {
   const [yours, setYours] = useState<AppRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [chip, setChip] = useState<CatalogChip>("All");
+  const headerRef = useRef<HTMLDivElement>(null);
+  const [headerH, setHeaderH] = useState(140);
+  const vvTop = useVisualViewportTop();
+
+  useLayoutEffect(() => {
+    const el = headerRef.current;
+    if (!el) return;
+    const sync = () => setHeaderH(el.offsetHeight);
+    sync();
+    const ro = new ResizeObserver(sync);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [loading, chip, apps.length, yours.length]);
 
   useEffect(() => {
     fetch("/api/catalog")
@@ -98,8 +112,12 @@ export default function CatalogPage() {
 
   return (
     <>
-      <main className="mx-auto w-full max-w-md px-5 pb-28 pt-6">
-        <div className="sticky top-0 z-20 -mx-5 bg-bg px-5 pb-3 pt-1">
+      <header
+        ref={headerRef}
+        className="fixed inset-x-0 z-30 border-b border-divider-soft bg-bg/95 backdrop-blur-md"
+        style={{ top: `calc(var(--forge-preview-banner-h, 0px) + ${vvTop}px)` }}
+      >
+        <div className="mx-auto w-full max-w-md px-5 pb-3 pt-5">
           <h1 className="display text-[32px] font-extrabold">Sparks</h1>
           <p className="mt-2 text-[15px] text-muted">Browse human-built Sparks, made with the agent</p>
 
@@ -134,7 +152,9 @@ export default function CatalogPage() {
             </div>
           )}
         </div>
+      </header>
 
+      <main className="mx-auto w-full max-w-md px-5 pb-28" style={{ paddingTop: headerH + 8 }}>
         {loading && <p className="mt-6 text-sm text-muted">Loading…</p>}
 
         {!loading && apps.length === 0 && yours.length === 0 && (

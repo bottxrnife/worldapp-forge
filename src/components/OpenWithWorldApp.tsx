@@ -5,7 +5,7 @@ import { WorldAppQrSheet } from "@/components/WorldAppQrSheet";
 import { APP } from "@/lib/config";
 import { forgeQrUrl } from "@/lib/sparkLinks";
 import { usePathname } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useLayoutEffect, useMemo, useRef, useState } from "react";
 
 type Props = {
   /** Optional path override — defaults to the current page. */
@@ -53,10 +53,30 @@ export function OpenWithWorldAppButton({ path, className = "", variant = "button
   );
 }
 
-/** Sticky strip shown while browsing the preview session in a desktop browser. */
+/** Fixed strip while browsing the preview session in a desktop browser. */
 export function PreviewWorldAppBanner() {
+  const ref = useRef<HTMLDivElement>(null);
+
+  useLayoutEffect(() => {
+    const root = document.documentElement;
+    const sync = () => {
+      const h = ref.current?.offsetHeight ?? 0;
+      root.style.setProperty("--forge-preview-banner-h", `${h}px`);
+    };
+    sync();
+    const ro = new ResizeObserver(sync);
+    if (ref.current) ro.observe(ref.current);
+    return () => {
+      ro.disconnect();
+      root.style.removeProperty("--forge-preview-banner-h");
+    };
+  }, []);
+
   return (
-    <div className="sticky top-0 z-[9998] border-b border-divider-soft bg-ink-panel px-4 py-2.5 text-hero-fg shadow-soft">
+    <div
+      ref={ref}
+      className="fixed inset-x-0 top-0 z-[9998] border-b border-divider-soft bg-ink-panel px-4 py-2.5 text-hero-fg shadow-soft"
+    >
       <div className="mx-auto flex max-w-md items-center justify-between gap-3">
         <p className="min-w-0 text-[12px] font-semibold leading-snug text-hero-muted">
           Browser preview — payments &amp; World ID need World App.

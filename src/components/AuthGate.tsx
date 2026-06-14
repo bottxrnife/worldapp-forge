@@ -25,6 +25,9 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   return (
     <>
       {user.guest && !inWorldApp ? <PreviewWorldAppBanner /> : null}
+      {user.guest && !inWorldApp ? (
+        <div aria-hidden className="h-[var(--forge-preview-banner-h,52px)] shrink-0" />
+      ) : null}
       {children}
     </>
   );
