@@ -4,6 +4,7 @@ import { Icon } from "@/components/Icon";
 import { hasWorldApp } from "@/lib/config";
 import QRCode from "qrcode";
 import { useCallback, useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 
 type Props = {
   title: string;
@@ -18,6 +19,9 @@ type Props = {
 export function WorldAppQrSheet({ title, subtitle, url, open, onClose, hint }: Props) {
   const [dataUrl, setDataUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => setMounted(true), []);
 
   useEffect(() => {
     if (!open) return;
@@ -37,13 +41,13 @@ export function WorldAppQrSheet({ title, subtitle, url, open, onClose, hint }: P
     }
   }, [url]);
 
-  if (!open) return null;
+  if (!open || !mounted) return null;
 
   const defaultHint = hasWorldApp()
     ? "Scan with World App on your phone to open the full experience."
     : "Scan to open this link on your phone.";
 
-  return (
+  return createPortal(
     <>
       <button
         type="button"
@@ -97,6 +101,7 @@ export function WorldAppQrSheet({ title, subtitle, url, open, onClose, hint }: P
 
         <p className="mt-3 break-all text-center text-[11px] font-medium text-faint">{url}</p>
       </div>
-    </>
+    </>,
+    document.body,
   );
 }
