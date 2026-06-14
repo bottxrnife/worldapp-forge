@@ -2,6 +2,7 @@
 
 import { FloatingNav, NAV_CLEARANCE } from "@/components/FloatingNav";
 import { ManifestRunner } from "@/components/ManifestRunner";
+import { SparkArt } from "@/components/SparkArt";
 import { Card, Pill } from "@/components/ui";
 import { createConversation, deleteConversation, listConversations, saveConversation, type Conversation } from "@/lib/conversations";
 import { MiniKit } from "@worldcoin/minikit-js";
@@ -13,6 +14,18 @@ const CHIPS = [
   "A coffee punch card — 10 stamps for a free coffee",
   "A one-vote-per-human poll for my DAO",
   "An RSVP where each human can claim one ticket",
+];
+
+/** Quick-action tweaks shown under a draft — each sends a canned revise prompt to the agent. */
+const VARIATIONS: Array<{ label: string; prompt: string }> = [
+  { label: "Make it cheaper", prompt: "Make it cheaper — lower the price." },
+  { label: "Pay-what-you-want", prompt: "Make the amount pay-what-you-want — an editable, unlocked amount the runner chooses." },
+  { label: "Add loyalty stamps", prompt: "Add a loyalty punch card with stamps and points per dollar." },
+  { label: "Require World ID", prompt: "Require World ID — one action per human." },
+  { label: "Turn it into a menu", prompt: "Turn it into a menu with a few orderable items and prices." },
+  { label: "Add a memo field", prompt: "Add a memo field so people can leave a short note." },
+  { label: "Rename it", prompt: "Give it a fresh, catchier name (and matching ENS label)." },
+  { label: "Make it free", prompt: "Make it free — remove the payment so it just claims." },
 ];
 
 function timeAgo(ts: number): string {
@@ -140,7 +153,11 @@ export default function CreatePage() {
           <div className="mt-4 flex flex-col gap-2.5">
             {convos.map((c) => (
               <button key={c.id} onClick={() => openChat(c.id)} className="flex items-center gap-3.5 rounded-2xl bg-wash p-3.5 text-left">
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] bg-blue-soft text-lg">{c.draft ? "✨" : "💬"}</div>
+                {c.draft ? (
+                  <SparkArt ens={c.draft.ensName} category={c.draft.category} size={44} />
+                ) : (
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] bg-blue-soft text-lg">💬</div>
+                )}
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-[15px] font-bold">{c.title}</p>
                   <p className="truncate text-[13px] text-muted">{lastPreview(c)}</p>
@@ -204,34 +221,50 @@ export default function CreatePage() {
           {busy && <p className="self-start text-sm text-muted">Designing…</p>}
 
           {active?.draft && (
-            <Card className="border-2 border-blue-soft">
-              <div className="flex items-center justify-between">
-                <div className="min-w-0">
-                  <p className="truncate text-base font-extrabold">{active.draft.name}</p>
-                  <p className="truncate text-xs text-blue-link">{active.draft.ensName}</p>
+            <Card className="rounded-3xl border-2 border-brand-soft">
+              <div className="flex items-center gap-3.5">
+                <SparkArt ens={active.draft.ensName} category={active.draft.category} size={44} />
+                <div className="min-w-0 flex-1">
+                  <p className="display truncate text-lg font-extrabold">{active.draft.name}</p>
+                  <p className="truncate text-xs font-semibold text-brand-strong">{active.draft.ensName}</p>
                 </div>
                 {active.draft.permissions.requiresWorldId ? <Pill tone="green">Human-only</Pill> : <Pill>Open</Pill>}
               </div>
-              <p className="mt-2 text-sm text-muted">{active.draft.description}</p>
+              <p className="mt-2.5 text-sm text-muted">{active.draft.description}</p>
               <p className="mt-2 text-[11px] text-faint">Ask in chat to edit this Spark — e.g. “make it $10” or “add a memo”.</p>
-              <div className="mt-3 flex gap-2">
-                <button onClick={() => setPreview((v) => !v)} className="flex-1 rounded-xl bg-cta px-4 py-2.5 text-sm font-bold text-cta-text">
-                  {preview ? "Hide preview" : "Preview"}
+              <div className="mt-3.5 flex gap-2">
+                <button
+                  onClick={() => setPreview(true)}
+                  className="flex-1 rounded-full bg-brand px-4 py-3 text-sm font-bold text-white shadow-pop active:scale-[0.98]"
+                >
+                  Preview
                 </button>
                 <Link
                   href="/publish"
                   onClick={() => sessionStorage.setItem("forge.draft", JSON.stringify(active.draft))}
-                  className="flex-1 rounded-xl bg-blue-soft px-4 py-2.5 text-center text-sm font-bold text-blue-link"
+                  className="flex-1 rounded-full bg-cta px-4 py-3 text-center text-sm font-bold text-cta-text active:scale-[0.98]"
                 >
                   Publish →
                 </Link>
               </div>
-              {preview && (
-                <div className="mt-4 border-t border-divider pt-4">
-                  <ManifestRunner manifest={active.draft} />
-                </div>
-              )}
             </Card>
+          )}
+
+          {active?.draft && !busy && (
+            <div>
+              <p className="mb-2 px-0.5 text-xs font-semibold text-muted">Tweak it:</p>
+              <div className="-mx-5 flex gap-2 overflow-x-auto px-5 pb-1">
+                {VARIATIONS.map((v) => (
+                  <button
+                    key={v.label}
+                    onClick={() => send(v.prompt)}
+                    className="shrink-0 whitespace-nowrap rounded-full bg-brand-soft px-3.5 py-2 text-[13px] font-semibold text-brand-strong active:scale-[0.97]"
+                  >
+                    {v.label}
+                  </button>
+                ))}
+              </div>
+            </div>
           )}
         </div>
         <div ref={endRef} />
@@ -264,6 +297,39 @@ export default function CreatePage() {
         </div>
       </div>
       <FloatingNav />
+
+      {/* full-screen preview — covers the nav (z-50), closes back to the chat */}
+      {preview && active?.draft && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-bg">
+          <div className="mx-auto min-h-full w-full max-w-md">
+            <div className="sticky top-0 z-10 flex items-center gap-3 border-b border-divider-soft bg-bg/80 px-6 py-4 backdrop-blur-xl">
+              <button onClick={() => setPreview(false)} aria-label="Close preview" className="shrink-0 text-xl leading-none text-muted active:scale-90">
+                ✕
+              </button>
+              <p className="display min-w-0 flex-1 truncate text-center text-base font-extrabold">{active.draft.name}</p>
+              <Link
+                href="/publish"
+                onClick={() => sessionStorage.setItem("forge.draft", JSON.stringify(active.draft))}
+                className="shrink-0 rounded-full bg-brand px-4 py-2 text-sm font-bold text-white shadow-pop active:scale-[0.97]"
+              >
+                Publish →
+              </Link>
+            </div>
+
+            <div className="px-5 pb-24 pt-4">
+              <div className="mb-4 flex items-center gap-3.5 rounded-3xl bg-wash p-4">
+                <SparkArt ens={active.draft.ensName} category={active.draft.category} size={44} />
+                <div className="min-w-0 flex-1">
+                  <p className="display truncate text-base font-extrabold">{active.draft.name}</p>
+                  <p className="truncate text-xs font-semibold text-brand-strong">{active.draft.ensName}</p>
+                  <p className="mt-0.5 line-clamp-2 text-[13px] text-muted">{active.draft.description}</p>
+                </div>
+              </div>
+              <ManifestRunner manifest={active.draft} />
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

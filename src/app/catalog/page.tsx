@@ -1,7 +1,7 @@
 "use client";
 
 import { FloatingNav } from "@/components/FloatingNav";
-import { appAccent, appEmoji, tint } from "@/lib/appStyle";
+import { SparkArt } from "@/components/SparkArt";
 import type { AppRecord } from "@/lib/catalog";
 import Link from "next/link";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
@@ -12,21 +12,17 @@ type Category = (typeof CATEGORIES)[number];
 const CHIPS = ["All", ...CATEGORIES] as const;
 type Chip = (typeof CHIPS)[number];
 
-/** Cover art for a Spark: its Walrus image if present, else an emoji/accent tile. */
-function SparkCover({ a, className, emojiSize }: { a: AppRecord; className: string; emojiSize: number }) {
+/** Cover art for a Spark: its Walrus image if present, else a SparkArt tile. */
+function SparkCover({ a, className, artSize }: { a: AppRecord; className: string; artSize: number }) {
   if (a.imageBlobId) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
       <img src={`/api/blob/${a.imageBlobId}`} alt={`${a.name} cover`} className={`object-cover ${className}`} />
     );
   }
-  const accent = appAccent(a.ensName);
   return (
-    <div
-      className={`flex items-center justify-center ${className}`}
-      style={{ backgroundColor: tint(accent, 0.14), border: `1px solid ${tint(accent, 0.32)}` }}
-    >
-      <span style={{ fontSize: emojiSize }}>{appEmoji(a.ensName, a.category)}</span>
+    <div className={`flex items-center justify-center ${className}`}>
+      <SparkArt ens={a.ensName} category={a.category} size={artSize} />
     </div>
   );
 }
@@ -35,26 +31,28 @@ function SparkCard({ a, featured = false }: { a: AppRecord; featured?: boolean }
   return (
     <Link
       href={`/app/${encodeURIComponent(a.ensName)}`}
-      className={`flex shrink-0 flex-col bg-wash ${featured ? "w-[230px] rounded-3xl p-3" : "w-[160px] rounded-2xl p-2.5"}`}
+      className={`flex shrink-0 flex-col bg-wash transition active:scale-[0.98] ${
+        featured ? "w-[240px] rounded-[28px] p-3.5" : "w-[166px] rounded-3xl p-3"
+      }`}
     >
       <div className="relative">
         <SparkCover
           a={a}
-          className={`w-full ${featured ? "h-[120px] rounded-2xl" : "h-[92px] rounded-xl"}`}
-          emojiSize={featured ? 46 : 34}
+          className={`w-full ${featured ? "h-[140px] rounded-[22px]" : "h-[108px] rounded-2xl"}`}
+          artSize={featured ? 112 : 80}
         />
         {a.requiresWorldId && (
-          <span className="absolute right-1.5 top-1.5 rounded-full bg-cta/80 px-1.5 py-0.5 text-[9px] font-bold text-cta-text">
+          <span className="absolute right-2 top-2 rounded-full bg-cta/85 px-2 py-0.5 text-[9.5px] font-bold text-cta-text">
             Human
           </span>
         )}
       </div>
-      <p className={`mt-2.5 truncate font-bold ${featured ? "text-[15px]" : "text-[13.5px]"}`}>{a.name}</p>
+      <p className={`mt-3 truncate font-bold ${featured ? "text-[16px]" : "text-[14px]"}`}>{a.name}</p>
       <p className={`mt-1 line-clamp-2 text-muted ${featured ? "text-[13px]" : "text-[12px] leading-snug"}`}>
         {a.tagline ?? a.description}
       </p>
       {a.stats && (
-        <p className="mt-1.5 text-[11.5px] font-semibold text-faint">
+        <p className="mt-2 text-[11.5px] font-semibold text-faint">
           <span className="text-ink">★ {a.stats.rating.toFixed(1)}</span>
           {" · "}
           {a.stats.runs.toLocaleString()} runs
@@ -103,8 +101,8 @@ export default function CatalogPage() {
   return (
     <>
       <main className="mx-auto w-full max-w-md px-5 pb-28 pt-6">
-        <h1 className="display text-[30px] font-extrabold">Sparks</h1>
-        <p className="mt-1.5 text-[15px] text-muted">Browse human-built Sparks, made with the agent</p>
+        <h1 className="display text-[32px] font-extrabold">Sparks</h1>
+        <p className="mt-2 text-[15px] text-muted">Browse human-built Sparks, made with the agent</p>
 
         {loading && <p className="mt-6 text-sm text-muted">Loading…</p>}
 
@@ -128,8 +126,8 @@ export default function CatalogPage() {
           <>
             {/* Featured rail */}
             {featured.length > 0 && (
-              <section className="mt-5">
-                <h3 className="display text-xl font-extrabold">Featured</h3>
+              <section className="mt-6">
+                <h3 className="display text-2xl font-extrabold">Featured</h3>
                 <Rail>
                   {featured.map((a) => (
                     <SparkCard key={a.ensName} a={a} featured />
@@ -139,14 +137,14 @@ export default function CatalogPage() {
             )}
 
             {/* Category chips (sticky to the top while you scroll) */}
-            <div className="sticky top-0 z-20 -mx-5 mt-6 bg-bg px-5 py-3">
+            <div className="sticky top-0 z-20 -mx-5 mt-7 bg-bg px-5 py-3">
               <div className="flex gap-2 overflow-x-auto" style={{ scrollbarWidth: "none" }}>
                 {CHIPS.map((c) => (
                   <button
                     key={c}
                     onClick={() => setChip(c)}
-                    className={`shrink-0 rounded-full px-4 py-2 text-sm font-semibold transition-colors ${
-                      chip === c ? "bg-brand text-white" : "bg-wash text-ink"
+                    className={`shrink-0 rounded-full px-4 py-2 text-sm font-bold transition ${
+                      chip === c ? "bg-brand text-white shadow-pop" : "bg-wash text-ink"
                     }`}
                   >
                     {c}
@@ -157,9 +155,9 @@ export default function CatalogPage() {
 
             {/* One horizontal rail per category */}
             {visible.map((s) => (
-              <section key={s.cat} className="mt-6">
+              <section key={s.cat} className="mt-8">
                 <div className="flex items-baseline justify-between">
-                  <h3 className="display text-xl font-extrabold">{s.cat}</h3>
+                  <h3 className="display text-2xl font-extrabold">{s.cat}</h3>
                   <span className="text-[13px] font-semibold text-muted">
                     {s.items.length} {s.items.length === 1 ? "Spark" : "Sparks"}
                   </span>

@@ -5,6 +5,7 @@
  * to a deterministic template when no model credential is set.
  */
 import { APP } from "./config";
+import { listApps } from "./catalog";
 import { resolveAddress } from "./ens";
 import { validateManifest } from "./manifest";
 import { SEED_APPS } from "./seeds";
@@ -33,6 +34,77 @@ type ContentBlock =
 export type ApiMessage = { role: "user" | "assistant"; content: ContentBlock[] | string };
 export type AgentTurn = { history: ApiMessage[]; text: string; draft: DappManifest | null; source: string };
 
+/**
+ * The hard-coded menu of everything this agent can assemble - surfaced verbatim
+ * through the get_capabilities tool so the model can ground itself and offer
+ * concrete variations. Mirrors the manifest schema (do not let it drift).
+ */
+const CAPABILITIES = {
+  componentTypes: {
+    amountInput: {
+      fields: {
+        token: 'string, e.g. "USDC"',
+        default: "string amount",
+        locked: "boolean? - true = fixed price, false/omit = the user can edit the amount",
+      },
+    },
+    recipient: { fields: { value: "an ENS name or 0x address that receives the payment" } },
+    memoInput: { fields: { default: "string - a user-editable note attached to the payment" } },
+    punchCard: {
+      fields: {
+        total: "number - stamps needed to earn the reward",
+        reward: "string - what a full card earns",
+        pointsPerDollar: "number - points earned per $1",
+      },
+    },
+    menu: {
+      fields: {
+        currency: 'string, e.g. "USDC"',
+        items: "array of { id, name, priceUsd, desc?, tag? (section like Mains/Drinks), imageBlobId? }",
+        pointsPerDollar: "number? - points earned per $1 spent",
+      },
+    },
+    submitButton: { fields: { label: "string - the call to action" }, required: "exactly one per manifest" },
+  },
+  skills: [
+    { id: "payment", name: "Payment / dues", pattern: "amountInput + recipient + memoInput? + submitButton" },
+    { id: "loyalty", name: "Loyalty / punch card", pattern: "punchCard + amountInput + recipient + submitButton" },
+    { id: "ordering", name: "Ordering / menu", pattern: "menu + recipient + submitButton" },
+    { id: "tipjar", name: "Tip jar", pattern: "amountInput (unlocked) + recipient + submitButton" },
+    { id: "vote", name: "Vote", pattern: "submitButton only; requiresWorldId, spendingCap $0.00" },
+    { id: "raffle", name: "Raffle", pattern: "submitButton only; requiresWorldId, one-entry-per-human" },
+    { id: "rsvp", name: "RSVP / ticket claim", pattern: "submitButton only; requiresWorldId, one-claim-per-human" },
+    {
+      id: "membership",
+      name: "Membership",
+      pattern: "amountInput + recipient + submitButton; requiresWorldId, one-membership-per-human",
+    },
+    { id: "fundraiser", name: "Fundraiser", pattern: "amountInput (unlocked) + recipient + submitButton" },
+    { id: "savings", name: "Savings circle", pattern: "amountInput + recipient + submitButton" },
+    { id: "transit", name: "Parking / transit", pattern: "amountInput + recipient + submitButton" },
+    { id: "article", name: "Article unlock", pattern: "amountInput (locked, small) + recipient + submitButton" },
+    {
+      id: "agent",
+      name: "Agent-hire",
+      pattern: "amountInput + recipient + submitButton; the result is approved before it settles",
+    },
+  ],
+  worldPolicies: [
+    "one-payment-per-human",
+    "one-card-per-human",
+    "one-vote-per-human",
+    "one-entry-per-human",
+    "one-claim-per-human",
+    "one-membership-per-human",
+  ],
+  categories: ["Finance", "Community", "Agents", "Events", "Tools"],
+  notes: [
+    "Payments always settle in the user's World wallet on World Chain - never mention bridges or other chains.",
+    "Every manifest must include exactly one submitButton.",
+    "You can draft and check names only; a human confirms spend and publish.",
+  ],
+} as const;
+
 const TOOLS = [
   {
     name: "get_current_draft",
@@ -52,7 +124,7 @@ const TOOLS = [
   {
     name: "draft_dapp_manifest",
     description:
-      "Create the mini-app draft the human will review and publish. Validated against the Forge schema; on success a draft card is shown. Call once the design is settled.",
+      "Create or update the mini-app draft the human will review and publish. Validated against the Forge schema; on success a draft card is shown. Call once the design is settled. To iterate on an existing draft (cheaper price, add loyalty, require World ID, turn it into a menu, rename, etc.) re-call with the FULL updated manifest - every field, not just the change.",
     input_schema: {
       type: "object",
       properties: {
@@ -64,7 +136,14 @@ const TOOLS = [
         components: {
           type: "array",
           description:
-            "UI components. Types: amountInput {token, default, locked}, recipient {value: ens-or-address}, memoInput {default}, punchCard {total, reward, pointsPerDollar}, menu {currency, items:[{id,name,priceUsd,desc?}], pointsPerDollar?}, submitButton {label}. Must include submitButton.",
+            "The app's UI + actions, rendered in order. Component types: " +
+            'amountInput {token (e.g. "USDC"), default (amount string), locked? (true = fixed price, false/omit = user can edit)}; ' +
+            "recipient {value: an ENS name or 0x address that receives the payment}; " +
+            "memoInput {default: a user-editable note on the payment}; " +
+            "punchCard {total (stamps for the reward), reward, pointsPerDollar} - loyalty/stamp card; pair with amountInput + recipient so each paid run stamps it; " +
+            'menu {currency, items:[{id, name, priceUsd, desc?, tag? (section like "Mains"/"Drinks"), imageBlobId?}], pointsPerDollar?} - ordering; the cart total is the amount, pair with a recipient; ' +
+            "submitButton {label} - REQUIRED, include exactly one. " +
+            'Patterns: payment/dues = amountInput + recipient (+ memoInput) + submitButton; loyalty = punchCard + amountInput + recipient + submitButton; ordering = menu + recipient + submitButton; vote/raffle/RSVP/claim = submitButton only with requiresWorldId + spendingCap "$0.00".',
           items: { type: "object" },
         },
         permissions: {
@@ -86,22 +165,94 @@ const TOOLS = [
       required: ["name", "ensLabel", "description", "outcome", "components", "permissions", "workflow"],
     },
   },
+  {
+    name: "list_sparks",
+    description:
+      "List the current Forge catalog Sparks (built-in samples + anything published) for inspiration and to avoid duplicate names/labels. Returns up to 30 as [{name, ensName, category, description}]. No inputs.",
+    input_schema: { type: "object", properties: {}, additionalProperties: false },
+  },
+  {
+    name: "get_capabilities",
+    description:
+      "Return the full menu of what you can build: every component type and its fields, the skill patterns you can assemble, the World ID one-per-human policies, and the categories. Use it to ground yourself and to offer concrete variations. No inputs.",
+    input_schema: { type: "object", properties: {}, additionalProperties: false },
+  },
+  {
+    name: "resolve_ens_name",
+    description:
+      'Resolve an ENS name (e.g. "vitalik.eth", or a bare label) to a mainnet address so you can validate a recipient the user names before using it. Returns {name, address, resolves}.',
+    input_schema: {
+      type: "object",
+      properties: { name: { type: "string", description: 'an ENS name like "vitalik.eth", or a bare label' } },
+      required: ["name"],
+    },
+  },
+  {
+    name: "suggest_labels",
+    description: `Propose 3 candidate lowercase ENS labels derived from an app name and report availability under ${APP.ensDomain} for each. Returns [{label, ensName, available}]. Use with check_ens_subname when naming a new app.`,
+    input_schema: {
+      type: "object",
+      properties: { name: { type: "string", description: "the app's display name or idea" } },
+      required: ["name"],
+    },
+  },
 ] as const;
 
 const SYSTEM_PROMPT = `You are Forge's design agent, inside World App. Users describe an everyday mini-app; you design it as a schema-validated manifest that runs inside Forge. Each published app gets an ENS subname under ${APP.ensDomain}, its manifest is stored on Walrus, and only verified humans can run or claim it.
 
-Skills (each maps to a component pattern):
-- Payments / dues: amountInput + recipient + memoInput + submitButton; settles in the user's World wallet on World Chain; set requiresWorldId for one-per-human.
-- Loyalty / rewards: punchCard {total, reward, pointsPerDollar} + payment components; one card per human (worldPolicy "one-card-per-human").
-- Ordering: menu {currency, items} + recipient + submitButton; the cart is the amount.
-- Voting / claims / RSVPs: no spend; submitButton; requiresWorldId true, spendingCap "$0.00".
+You can build a wide range of mini-apps by assembling a small set of components. Skills you can ship:
+- Payment / dues - collect a fixed or open amount to a recipient.
+- Loyalty / punch card - a stamp card that fills on each paid run and earns points.
+- Ordering / menu - an in-app menu cart; pay the total, earn points, get a pickup code.
+- Tip jar - one tap, pick-your-own-amount tip.
+- Vote - one verified human, one vote (no spend).
+- Raffle - one entry per human (no spend).
+- RSVP / ticket claim - claim one pass or spot per human (no spend).
+- Membership pass - one membership per human, usually a recurring fee.
+- Fundraiser - open-amount contributions toward a goal.
+- Savings circle - rotating contributions that pay out each round.
+- Parking / transit - pay a metered or top-up amount.
+- Article unlock - a tiny fixed micropayment.
+- Agent-hire - fund a human-backed agent task; the result is approved before it settles.
+
+Tools for grounding & design:
+- get_capabilities - the full menu of component types, their fields, the skill patterns, and the one-per-human policies. Lean on it so you know exactly what you can offer.
+- list_sparks - the existing catalog, for inspiration and to avoid duplicate names/labels.
+- resolve_ens_name - verify a recipient the user names (e.g. "pay alice.eth") resolves to a real address before you use it.
+- suggest_labels + check_ens_subname - pick an available ENS label under ${APP.ensDomain} for a new app.
+- get_current_draft + draft_dapp_manifest - read and (re)write the design.
+
+Be proactive and offer variations. When a request is open-ended, propose 2-3 concrete directions in one short line and ask which they want - e.g. "Fixed price, pay-what-you-want, or with loyalty stamps?" - then build the chosen one. If the request is already specific, just build it.
+
+To edit or iterate (the user may say "make it cheaper", "add loyalty", "require World ID", "turn it into a menu", "rename it", etc.): call get_current_draft, then re-call draft_dapp_manifest with the FULL updated manifest - every field, not just the change.
+
+Component patterns to assemble: amountInput + recipient (+ memoInput) + submitButton for payments; add a punchCard for loyalty; a menu (+ recipient) for ordering; submitButton alone with requiresWorldId + spendingCap "$0.00" for vote/raffle/RSVP/claim. Set requiresWorldId + a worldPolicy (one-payment-per-human, one-card-per-human, one-vote-per-human, one-entry-per-human, one-claim-per-human, one-membership-per-human) whenever it should be one-per-human.
 
 Hard rules:
-- Payments are in the World wallet; never mention bridges or other chains.
-- State the outcome before details. Permissions are 1-5 plain-English lines, never raw addresses.
-- You draft and check names only. You CANNOT spend or publish - the human confirms those.
+- Payments settle in the user's World wallet on World Chain; never mention bridges or other chains.
+- State the outcome before the details. Permissions are 1-5 plain-English lines, never raw addresses.
+- You draft and check names only. You CANNOT spend or publish - the human confirms those in the UI.
 
-Method: ask at most one short clarifying question only if essential; otherwise check_ens_subname for a short label, then call draft_dapp_manifest, then reply with one short sentence that the app is ready to review below. To EDIT an existing Spark, call get_current_draft first, then re-call draft_dapp_manifest with the FULL updated manifest (all fields, not just the change). Keep replies short and friendly. No markdown headers.`;
+Method: ask at most one short clarifying question only if essential (the variation choice counts). Ground with get_capabilities/list_sparks as needed, verify any named recipient with resolve_ens_name, pick a free label with suggest_labels/check_ens_subname, then call draft_dapp_manifest and reply with one short sentence that the app is ready to review below. Keep replies short and friendly. No markdown headers.`;
+
+/** Availability check shared by check_ens_subname + suggest_labels: a label is
+ *  taken if a seed Spark already uses it or it resolves on mainnet. */
+async function labelAvailable(label: string): Promise<boolean> {
+  const l = label.toLowerCase();
+  const taken = SEED_APPS.some((a) => a.ensName.startsWith(l + ".")) || !!(await resolveAddress(`${l}.${APP.ensDomain}`));
+  return !taken;
+}
+
+/** Derive up to 3 distinct lowercase ENS-label candidates from an app name. */
+function candidateLabels(name: string): string[] {
+  const words = name.toLowerCase().replace(/[^a-z0-9\s-]/g, " ").split(/[\s-]+/).filter(Boolean);
+  const first = words[0] || "app";
+  const pool = [first, words.slice(0, 2).join(""), words.join(""), words.map((w) => w[0]).join(""), `${first}app`];
+  const unique = [...new Set(pool.map((c) => c.replace(/[^a-z0-9-]/g, "")).filter((c) => c.length >= 2))];
+  let n = 1;
+  while (unique.length < 3) unique.push(`${first}${++n}`);
+  return unique.slice(0, 3);
+}
 
 async function runTool(name: string, input: Record<string, unknown>, currentDraft: DappManifest | null): Promise<string> {
   if (name === "get_current_draft") {
@@ -109,10 +260,29 @@ async function runTool(name: string, input: Record<string, unknown>, currentDraf
   }
   if (name === "check_ens_subname") {
     const label = String(input.label ?? "").toLowerCase();
-    const taken =
-      SEED_APPS.some((a) => a.ensName.startsWith(label + ".")) ||
-      !!(await resolveAddress(`${label}.${APP.ensDomain}`));
-    return JSON.stringify({ label, ensName: `${label}.${APP.ensDomain}`, available: !taken });
+    return JSON.stringify({ label, ensName: `${label}.${APP.ensDomain}`, available: await labelAvailable(label) });
+  }
+  if (name === "list_sparks") {
+    const sparks = listApps()
+      .slice(0, 30)
+      .map((a) => ({ name: a.name, ensName: a.ensName, category: a.category, description: a.description }));
+    return JSON.stringify(sparks);
+  }
+  if (name === "get_capabilities") {
+    return JSON.stringify(CAPABILITIES);
+  }
+  if (name === "resolve_ens_name") {
+    const raw = String(input.name ?? "").trim().toLowerCase();
+    const full = raw.includes(".") ? raw : raw ? `${raw}.eth` : "";
+    const address = full ? await resolveAddress(full) : null;
+    return JSON.stringify({ name: full || raw, address: address ?? null, resolves: !!address });
+  }
+  if (name === "suggest_labels") {
+    const suggestions: { label: string; ensName: string; available: boolean }[] = [];
+    for (const label of candidateLabels(String(input.name ?? ""))) {
+      suggestions.push({ label, ensName: `${label}.${APP.ensDomain}`, available: await labelAvailable(label) });
+    }
+    return JSON.stringify(suggestions);
   }
   if (name === "draft_dapp_manifest") {
     const v = validateManifest(input);

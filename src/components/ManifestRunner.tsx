@@ -2,6 +2,7 @@
 
 import { PunchCard } from "@/components/PunchCard";
 import { RestaurantApp } from "@/components/RestaurantApp";
+import { SparkArt } from "@/components/SparkArt";
 import { Pill } from "@/components/ui";
 import { VerifyButton } from "@/components/VerifyButton";
 import { payWorld } from "@/lib/pay";
@@ -77,7 +78,10 @@ export function ManifestRunner({ manifest }: { manifest: DappManifest }) {
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="rounded-2xl bg-blue-soft px-4 py-3 text-sm font-semibold text-blue-body">{manifest.outcome}</div>
+      <div className="flex items-center gap-3.5 rounded-3xl bg-brand-soft p-4">
+        <SparkArt ens={manifest.ensName} category={manifest.category} size={40} />
+        <p className="text-[14px] font-semibold leading-snug text-blue-body">{manifest.outcome}</p>
+      </div>
       {manifest.permissions.requiresWorldId && (
         <Pill tone="green">World ID · {manifest.permissions.worldPolicy ?? "one per human"}</Pill>
       )}
@@ -125,14 +129,17 @@ export function ManifestRunner({ manifest }: { manifest: DappManifest }) {
           {!verified ? (
             <VerifyButton signal={ens} onVerified={() => setVerified(true)} />
           ) : cardFull ? (
-            <button onClick={redeem} className="rounded-2xl bg-success px-5 py-3.5 text-[15px] font-bold text-white">
+            <button
+              onClick={redeem}
+              className="rounded-3xl bg-success px-5 py-4 text-[15px] font-bold text-white transition active:scale-[0.98]"
+            >
               Redeem {punch?.reward} (free)
             </button>
           ) : (
             <button
               onClick={run}
               disabled={editableAmount ? total <= 0 : false}
-              className="rounded-2xl bg-cta px-5 py-3.5 text-[15px] font-bold text-cta-text disabled:opacity-50"
+              className="rounded-3xl bg-cta px-5 py-4 text-[15px] font-bold text-cta-text transition active:scale-[0.98] disabled:opacity-50"
             >
               {submitLabel}
               {total > 0 ? ` · $${total.toFixed(2)}` : ""}
@@ -142,7 +149,7 @@ export function ManifestRunner({ manifest }: { manifest: DappManifest }) {
       )}
 
       {step >= 0 && !done && (
-        <div className="flex flex-col gap-2 rounded-2xl bg-wash p-4">
+        <div className="flex flex-col gap-2 rounded-3xl bg-wash p-4">
           {manifest.workflow.steps.map((s, i) => (
             <div key={s.id} className="flex items-center gap-2 text-sm">
               <span className={i <= step ? "text-success" : "text-faint"}>{i < step ? "✓" : i === step ? "○" : "·"}</span>
@@ -153,13 +160,25 @@ export function ManifestRunner({ manifest }: { manifest: DappManifest }) {
       )}
 
       {done && (
-        <div className="rounded-2xl bg-success-bg p-4 text-center">
-          <p className="text-lg font-extrabold text-success">{done.redeemed ? "Reward redeemed" : "Done"}</p>
-          {done.pointsEarned > 0 && <p className="mt-1 text-sm text-success/80">+{done.pointsEarned} points earned</p>}
-          {done.punches != null && done.total != null && (
-            <p className="mt-0.5 text-sm text-success/80">{done.punches}/{done.total} stamps</p>
+        <div className="rounded-3xl bg-success-bg p-6 text-center">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-success text-2xl font-extrabold text-white">
+            ✓
+          </div>
+          <p className="display mt-3 text-[22px] font-extrabold text-success">
+            {done.redeemed ? "Reward redeemed" : "All done"}
+          </p>
+          {done.pointsEarned > 0 && (
+            <p className="display mt-2 text-[40px] font-extrabold leading-none text-success">
+              +{done.pointsEarned}
+              <span className="ml-1.5 text-[16px] font-bold text-success/70">pts</span>
+            </p>
           )}
-          <p className="mt-1 text-xs text-success/70">
+          {done.punches != null && done.total != null && (
+            <p className="mt-2 text-[13px] font-semibold text-success/80">
+              {done.punches}/{done.total} stamps
+            </p>
+          )}
+          <p className="mt-2 text-xs text-success/70">
             {done.simulated ? "Simulated settle (open in World App + fund your wallet to pay for real)." : "Settled in your World wallet."}
           </p>
         </div>

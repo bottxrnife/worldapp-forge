@@ -142,22 +142,22 @@ export function RestaurantApp({ manifest }: { manifest: DappManifest }) {
       {/* header: title + live points */}
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <p className="truncate text-[15px] font-extrabold">{manifest.name}</p>
+          <p className="truncate text-[16px] font-extrabold">{manifest.name}</p>
           <p className="truncate text-[12px] font-semibold text-blue-link">{ens}</p>
         </div>
-        <span className="shrink-0 rounded-full bg-ink-panel px-3 py-1.5 text-[12.5px] font-bold text-white">
-          ★ {points.toLocaleString()} pts
+        <span className="shrink-0 rounded-full bg-ink-panel px-3.5 py-2 text-[13px] font-bold text-white">
+          <span className="text-brand">★</span> {points.toLocaleString()} pts
         </span>
       </div>
 
       {/* tabs */}
-      <div className="flex rounded-full bg-wash p-1">
+      <div className="flex rounded-full bg-wash p-1.5">
         {(["order", "rewards", "history"] as Tab[]).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
-            className={`flex-1 rounded-full py-2 text-[13px] font-bold capitalize transition-colors ${
-              tab === t ? "bg-surface text-ink shadow-sm" : "text-muted"
+            className={`flex-1 rounded-full py-2.5 text-[13.5px] font-bold capitalize transition ${
+              tab === t ? "bg-surface text-ink shadow-soft" : "text-muted"
             }`}
           >
             {t}
@@ -208,7 +208,7 @@ export function RestaurantApp({ manifest }: { manifest: DappManifest }) {
           <button
             onClick={placeAndPay}
             disabled={cartCount === 0 || paying}
-            className="mt-1 rounded-2xl bg-cta px-5 py-3.5 text-[15px] font-bold text-cta-text disabled:opacity-50"
+            className="mt-1 rounded-3xl bg-cta px-5 py-4 text-[15px] font-bold text-cta-text transition active:scale-[0.98] disabled:opacity-50"
           >
             {paying
               ? "Placing your order…"
@@ -222,10 +222,16 @@ export function RestaurantApp({ manifest }: { manifest: DappManifest }) {
       {/* ── Rewards ── */}
       {tab === "rewards" && (
         <>
-          <div className="rounded-2xl bg-ink-panel p-[18px] text-white">
-            <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-white/55">Your points</p>
-            <p className="mt-1 text-[30px] font-extrabold">{points.toLocaleString()}</p>
-            <p className="mt-0.5 text-[12.5px] text-white/55">{ppd} points per $1 spent</p>
+          <div className="rounded-3xl bg-ink-panel p-6 text-white shadow-card">
+            <div className="flex items-center justify-between">
+              <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-white/55">Your points</p>
+              <span className="rounded-full bg-brand/15 px-3 py-1 text-[11px] font-bold text-brand">{ppd} / $1</span>
+            </div>
+            <p className="display mt-2 text-[52px] font-extrabold leading-none">
+              {points.toLocaleString()}
+              <span className="ml-2 text-[18px] font-bold text-brand">pts</span>
+            </p>
+            <p className="mt-2 text-[12.5px] text-white/55">Redeem your points on the rewards below</p>
           </div>
           <p className="mt-1 text-[12px] font-bold uppercase tracking-wide text-muted">Redeem points</p>
           {rewards.map((r) => {
@@ -324,7 +330,7 @@ export function RestaurantApp({ manifest }: { manifest: DappManifest }) {
                 setConfirmation(null);
                 setTab("history");
               }}
-              className="mt-5 w-full rounded-2xl bg-cta px-5 py-3.5 text-[15px] font-bold text-cta-text"
+              className="mt-5 w-full rounded-3xl bg-cta px-5 py-4 text-[15px] font-bold text-cta-text transition active:scale-[0.98]"
             >
               Done
             </button>

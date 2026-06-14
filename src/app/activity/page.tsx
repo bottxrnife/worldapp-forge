@@ -1,7 +1,7 @@
 "use client";
 
 import { FloatingNav } from "@/components/FloatingNav";
-import { appAccent, appEmoji, tint } from "@/lib/appStyle";
+import { SparkArt } from "@/components/SparkArt";
 import { getActivity, getLoyalty, type ActivityEntry, type LoyaltyRecord } from "@/lib/store";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -18,10 +18,12 @@ function relTime(ts: number): string {
   return new Date(ts).toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
+type SparkMeta = { name: string; category?: string };
+
 export default function ActivityPage() {
   const [loyalty, setLoyalty] = useState<Record<string, LoyaltyRecord>>({});
   const [activity, setActivity] = useState<ActivityEntry[]>([]);
-  const [names, setNames] = useState<Record<string, string>>({});
+  const [meta, setMeta] = useState<Record<string, SparkMeta>>({});
 
   useEffect(() => {
     setLoyalty(getLoyalty());
@@ -29,9 +31,9 @@ export default function ActivityPage() {
     fetch("/api/catalog")
       .then((r) => r.json())
       .then((d) => {
-        const m: Record<string, string> = {};
-        for (const a of d.apps ?? []) m[a.ensName] = a.name;
-        setNames(m);
+        const m: Record<string, SparkMeta> = {};
+        for (const a of d.apps ?? []) m[a.ensName] = { name: a.name, category: a.category };
+        setMeta(m);
       })
       .catch(() => {});
   }, []);
@@ -44,19 +46,25 @@ export default function ActivityPage() {
   return (
     <>
       <main className="mx-auto w-full max-w-md px-5 pb-28 pt-6">
-        <h1 className="display text-[30px] font-extrabold">Activity</h1>
+        <h1 className="display text-[32px] font-extrabold">Activity</h1>
 
-        <div className="mt-4 rounded-3xl bg-ink-panel p-5 text-white">
-          <p className="text-xs font-bold uppercase tracking-wider text-white/60">Total points</p>
-          <p className="mt-1 text-4xl font-extrabold">{totalPoints.toLocaleString()}</p>
-          <p className="mt-1 text-sm text-white/70">
+        <div className="mt-5 rounded-[28px] bg-ink-panel p-6 text-white shadow-card">
+          <div className="flex items-center justify-between">
+            <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-white/55">Total points</p>
+            <span className="rounded-full bg-brand/15 px-3 py-1 text-[11px] font-bold text-brand">★ Rewards</span>
+          </div>
+          <p className="display mt-2 text-[56px] font-extrabold leading-none">
+            {totalPoints.toLocaleString()}
+            <span className="ml-2 text-[20px] font-bold text-brand">pts</span>
+          </p>
+          <p className="mt-2 text-[13.5px] text-white/60">
             Earned across {earningSparks} Spark{earningSparks === 1 ? "" : "s"}
           </p>
         </div>
 
-        <h3 className="display mt-6 text-xl font-extrabold">Activity</h3>
+        <h3 className="display mt-8 text-2xl font-extrabold">Activity</h3>
         {activity.length === 0 ? (
-          <div className="mt-3 rounded-2xl bg-wash p-6 text-center">
+          <div className="mt-3 rounded-3xl bg-wash p-6 text-center">
             <p className="text-sm text-muted">Run a Spark and your receipts show up here.</p>
             <Link
               href="/catalog"
@@ -66,26 +74,26 @@ export default function ActivityPage() {
             </Link>
           </div>
         ) : (
-          <div className="mt-3 flex flex-col gap-2">
+          <div className="mt-3 flex flex-col gap-2.5">
             {activity.map((e) => (
-              <div key={e.id} className="flex items-center justify-between gap-3 rounded-2xl bg-wash px-4 py-3">
+              <div key={e.id} className="flex items-center justify-between gap-3 rounded-2xl bg-wash px-4 py-3.5">
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
-                    <p className="truncate text-sm font-semibold">{e.title}</p>
+                    <p className="truncate text-[14px] font-bold">{e.title}</p>
                     {e.simulated && (
                       <span className="shrink-0 rounded-full bg-surface px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-muted">
                         simulated
                       </span>
                     )}
                   </div>
-                  <p className="text-xs text-muted">
+                  <p className="mt-0.5 text-xs text-muted">
                     {relTime(e.ts)}
                     {e.note ? ` · ${e.note}` : ""}
                   </p>
                 </div>
                 <div className="shrink-0 text-right">
-                  {e.amountUsd ? <p className="text-sm font-bold">${e.amountUsd.toFixed(2)}</p> : null}
-                  {e.points ? <p className="text-xs text-success">+{e.points} pts</p> : null}
+                  {e.amountUsd ? <p className="text-[15px] font-extrabold">${e.amountUsd.toFixed(2)}</p> : null}
+                  {e.points ? <p className="text-xs font-bold text-success">+{e.points} pts</p> : null}
                 </div>
               </div>
             ))}
@@ -94,32 +102,27 @@ export default function ActivityPage() {
 
         {passes.length > 0 && (
           <>
-            <h3 className="display mt-6 text-xl font-extrabold">Your passes</h3>
+            <h3 className="display mt-8 text-2xl font-extrabold">Your passes</h3>
             <div className="mt-3 flex flex-col gap-2.5">
-              {passes.map(([ens, r]) => {
-                const accent = appAccent(ens);
-                return (
-                  <Link
-                    key={ens}
-                    href={`/app/${encodeURIComponent(ens)}`}
-                    className="flex items-center gap-3.5 rounded-2xl bg-wash p-3.5"
-                  >
-                    <div
-                      className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[16px]"
-                      style={{ backgroundColor: tint(accent, 0.14), border: `1px solid ${tint(accent, 0.32)}` }}
-                    >
-                      <span className="text-xl">{appEmoji(ens)}</span>
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-[15px] font-bold">{names[ens] ?? ens}</p>
-                      <p className="text-[13px] text-muted">
-                        {r.punches > 0 ? `${r.punches} stamps · ` : ""}
-                        {r.points.toLocaleString()} points
-                      </p>
-                    </div>
-                  </Link>
-                );
-              })}
+              {passes.map(([ens, r]) => (
+                <Link
+                  key={ens}
+                  href={`/app/${encodeURIComponent(ens)}`}
+                  className="flex items-center gap-3.5 rounded-3xl bg-wash p-3.5 transition active:scale-[0.98]"
+                >
+                  <SparkArt ens={ens} category={meta[ens]?.category} size={44} />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-[15px] font-bold">{meta[ens]?.name ?? ens}</p>
+                    <p className="text-[13px] text-muted">
+                      {r.punches > 0 ? `${r.punches} stamps` : "Loyalty pass"}
+                    </p>
+                  </div>
+                  <div className="shrink-0 text-right">
+                    <p className="text-[18px] font-extrabold leading-none">{r.points.toLocaleString()}</p>
+                    <p className="mt-1 text-[11px] font-semibold text-faint">points</p>
+                  </div>
+                </Link>
+              ))}
             </div>
           </>
         )}
