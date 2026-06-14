@@ -171,8 +171,8 @@ export default function Home() {
   return (
     <>
       <main className="mx-auto w-full max-w-md px-5 pb-28 pt-5">
-        {/* pinned header — avatar row + title stay visible while scrolling */}
-        <div className="sticky top-0 z-20 -mx-5 bg-bg px-5 pb-3 pt-5">
+        {/* header — avatar row + title scroll with the page */}
+        <div className="-mx-5 px-5">
           <div className="flex items-center justify-between">
             <Link
               href="/profile"
@@ -187,7 +187,6 @@ export default function Home() {
           </div>
 
           <h1 className="display mt-4 text-[38px] font-extrabold leading-none">{APP.name}</h1>
-          <p className="mt-2 text-[15px] text-muted">Build a Spark — an app an agent makes for you</p>
         </div>
 
         {/* hero — the design agent */}

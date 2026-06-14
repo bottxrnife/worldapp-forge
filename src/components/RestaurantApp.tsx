@@ -4,7 +4,8 @@ import { EditablePrice, EditableText } from "@/components/EditableField";
 import { Icon } from "@/components/Icon";
 import { ImageUploadSlot } from "@/components/ImageUploadSlot";
 import { SparkCta, SparkShell } from "@/components/SparkShell";
-import { WalrusProof } from "@/components/WalrusProof";
+import { WalrusProofList } from "@/components/WalrusProof";
+import { walrusAssets } from "@/lib/walrusAssets";
 import { useAuth } from "@/lib/auth";
 import { payWorld } from "@/lib/pay";
 import { sparkTheme } from "@/lib/sparkTheme";
@@ -493,12 +494,7 @@ export function RestaurantApp({
           </div>
         </div>
       )}
-      {manifest.storage?.manifestBlobId && (
-        <WalrusProof blobId={manifest.storage.manifestBlobId} label="Walrus manifest" />
-      )}
-      {manifest.storage?.imageBlobId && (
-        <WalrusProof blobId={manifest.storage.imageBlobId} label="Cover on Walrus" />
-      )}
+      <WalrusProofList assets={walrusAssets(manifest)} />
     </SparkShell>
   );
 }

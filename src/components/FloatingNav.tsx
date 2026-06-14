@@ -6,8 +6,11 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
+/** Extra lift above the screen edge (added on top of safe-area-inset-bottom). */
+const NAV_BOTTOM_INSET = 16;
+
 /** Space the floating bar occupies — use as bottom padding so content clears it. */
-export const NAV_CLEARANCE = 104;
+export const NAV_CLEARANCE = 120;
 
 function Icon({ d, active }: { d: string; active: boolean }) {
   return (
@@ -91,7 +94,7 @@ export function FloatingNav() {
     >
       <div
         className="pointer-events-none bg-gradient-to-t from-bg via-bg/95 to-transparent px-5 pt-7"
-        style={{ paddingBottom: "max(env(safe-area-inset-bottom), 12px)" }}
+        style={{ paddingBottom: `max(calc(env(safe-area-inset-bottom) + ${NAV_BOTTOM_INSET}px), ${NAV_BOTTOM_INSET + 12}px)` }}
       >
         <div className="pointer-events-auto flex items-center justify-between rounded-full bg-surface px-4 py-2.5 shadow-[0_8px_30px_rgba(11,16,32,0.14)]">
           {SIDE.map((t) => (

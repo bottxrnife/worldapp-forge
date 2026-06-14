@@ -95,14 +95,21 @@ function punchApp(
 
 function menuApp(
   b: Base,
-  o: { recipient: string; ppd: number; items: { id: string; name: string; priceUsd: number; desc?: string; tag?: string }[] },
+  o: {
+    recipient: string;
+    ppd: number;
+    items: { id: string; name: string; priceUsd: number; desc?: string; tag?: string; imageBlobId?: string }[];
+    storage?: { imageBlobId?: string };
+  },
 ): DappManifest {
   const c: ManifestComponent[] = [
     { type: "menu", currency: "USDC", pointsPerDollar: o.ppd, items: o.items },
     { type: "recipient", value: o.recipient },
     { type: "submitButton", label: b.submit },
   ];
-  return compose(b, c, b.cap ?? "80 USDC");
+  const m = compose(b, c, b.cap ?? "80 USDC");
+  if (o.storage) m.storage = o.storage;
+  return m;
 }
 
 export const SEED_APPS: DappManifest[] = [
@@ -278,15 +285,68 @@ export const SEED_APPS: DappManifest[] = [
     {
       recipient: ens("bistro"),
       ppd: 100,
+      storage: { imageBlobId: "YhmEnnYOSQpIQAR2wt2MBsDyRrD_yv3C_kDcRJFlA6o" },
       items: [
-        { id: "smash", name: "Signature Smash Burger", priceUsd: 11, desc: "Double patty, house sauce", tag: "Mains" },
-        { id: "chicken", name: "Crispy Chicken Sandwich", priceUsd: 10, desc: "Buttermilk-fried, pickles", tag: "Mains" },
-        { id: "veg", name: "Garden Halloumi Wrap", priceUsd: 9, desc: "Grilled halloumi, slaw", tag: "Mains" },
-        { id: "fries", name: "Truffle Fries", priceUsd: 5, desc: "Parmesan, herbs", tag: "Sides" },
-        { id: "rings", name: "Onion Rings", priceUsd: 4.5, tag: "Sides" },
-        { id: "shake", name: "Salted Caramel Shake", priceUsd: 6, tag: "Drinks" },
-        { id: "lemonade", name: "House Lemonade", priceUsd: 3.5, tag: "Drinks" },
-        { id: "coffee", name: "Cold Brew", priceUsd: 4, tag: "Drinks" },
+        {
+          id: "smash",
+          name: "Signature Smash Burger",
+          priceUsd: 11,
+          desc: "Double patty, house sauce",
+          tag: "Mains",
+          imageBlobId: "lco75BC59-XZq7B4uSqSIC0VoJ0WQgjd-hl1RQiNxHQ",
+        },
+        {
+          id: "chicken",
+          name: "Crispy Chicken Sandwich",
+          priceUsd: 10,
+          desc: "Buttermilk-fried, pickles",
+          tag: "Mains",
+          imageBlobId: "mpmLy0clMrF-0ll30EWkBWmqoCAulMVSv8bi607qJsI",
+        },
+        {
+          id: "veg",
+          name: "Garden Halloumi Wrap",
+          priceUsd: 9,
+          desc: "Grilled halloumi, slaw",
+          tag: "Mains",
+          imageBlobId: "WSOoXUWinzD5Gq1WdoCqtTOrZmkHF_5s05IhKpJlV2g",
+        },
+        {
+          id: "fries",
+          name: "Truffle Fries",
+          priceUsd: 5,
+          desc: "Parmesan, herbs",
+          tag: "Sides",
+          imageBlobId: "YYcDZgfXwx8R280p9borXSzsi77UretzESbWEGIfDR0",
+        },
+        {
+          id: "rings",
+          name: "Onion Rings",
+          priceUsd: 4.5,
+          tag: "Sides",
+          imageBlobId: "2SuyDg902_wEjG_GJ7LMVWGizFeG91W_YkIDXdpx5lI",
+        },
+        {
+          id: "shake",
+          name: "Salted Caramel Shake",
+          priceUsd: 6,
+          tag: "Drinks",
+          imageBlobId: "60QTjVKz9G3r3TIZOOW9OQns_R_MYp1C_ajP7c4QHtY",
+        },
+        {
+          id: "lemonade",
+          name: "House Lemonade",
+          priceUsd: 3.5,
+          tag: "Drinks",
+          imageBlobId: "BeYp5kAfwVUA1OCpJcpIuNYpEPU-R3oVPULHqEPmGfk",
+        },
+        {
+          id: "coffee",
+          name: "Cold Brew",
+          priceUsd: 4,
+          tag: "Drinks",
+          imageBlobId: "kHX533NdxooBQCgLVLxAUq6tnLirg84ehaDhrpX9oI0",
+        },
       ],
     },
   ),

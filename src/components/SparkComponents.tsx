@@ -65,6 +65,7 @@ function Panel({
   className?: string;
   dark?: boolean;
 }) {
+  const sparkSurface = `color-mix(in srgb, ${theme.ink} 8%, ${theme.soft})`;
   return (
     <div
       data-spark-panel
@@ -74,6 +75,8 @@ function Panel({
         background: dark ? theme.ink : theme.soft,
         color: dark ? "#fff" : theme.ink,
         ["--spark-ink" as string]: theme.ink,
+        ["--spark-soft" as string]: theme.soft,
+        ["--spark-surface" as string]: sparkSurface,
       }}
     >
       {children}
@@ -158,7 +161,7 @@ export function SparkComponent({
           ) : (
             <div
               className="mt-3 flex items-center gap-2 rounded-xl px-3 py-2.5 text-[12px] font-semibold"
-              style={{ background: "var(--color-surface)", color: accent }}
+              style={{ background: "var(--spark-surface)", color: accent }}
             >
               <Icon name="unlock" size={14} />
               Pay to unlock the full article
@@ -188,7 +191,7 @@ export function SparkComponent({
             {c.options.map((opt, oi) => (
               <div
                 key={opt.value}
-                className="flex flex-wrap items-center gap-2 rounded-xl bg-surface px-3 py-2.5"
+                className="flex flex-wrap items-center gap-2 rounded-xl bg-[var(--spark-surface)] px-3 py-2.5"
               >
                 <EditableText
                   value={opt.label}
@@ -231,7 +234,7 @@ export function SparkComponent({
                   className="shrink-0 px-4 py-2.5 text-[13px] font-bold transition active:scale-[0.98]"
                   style={{
                     borderRadius: theme.radius,
-                    background: active ? accent : "var(--color-surface)",
+                    background: active ? accent : "var(--spark-surface)",
                     color: active ? "#fff" : theme.ink,
                     boxShadow: active ? `0 8px 20px ${accent}44` : undefined,
                   }}
@@ -266,7 +269,7 @@ export function SparkComponent({
                 } ${locked ? "cursor-not-allowed opacity-55" : ""}`}
                 style={{
                   borderRadius: ticket ? 0 : theme.radius,
-                  background: active ? accent : "var(--color-surface)",
+                  background: active ? accent : "var(--spark-surface)",
                   color: active ? "#fff" : theme.ink,
                 }}
               >
@@ -387,7 +390,7 @@ export function SparkComponent({
             type="button"
             disabled={val <= c.min}
             onClick={() => setField(c.key, Math.max(c.min, val - 1))}
-            className="flex h-9 w-9 items-center justify-center rounded-full bg-surface text-lg font-bold disabled:opacity-40"
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--spark-surface)] text-lg font-bold disabled:opacity-40"
             style={{ color: theme.ink }}
           >
             −
@@ -400,7 +403,7 @@ export function SparkComponent({
             type="button"
             disabled={val >= c.max}
             onClick={() => setField(c.key, Math.min(c.max, val + 1))}
-            className="flex h-9 w-9 items-center justify-center rounded-full bg-surface text-lg font-bold disabled:opacity-40"
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--spark-surface)] text-lg font-bold disabled:opacity-40"
             style={{ color: theme.ink }}
           >
             +
@@ -434,7 +437,7 @@ export function SparkComponent({
                 <div
                   key={pi}
                   className="flex items-center justify-center py-3 font-bold"
-                  style={{ borderRadius: jar ? "9999px" : theme.radius, background: "var(--color-surface)" }}
+                  style={{ borderRadius: jar ? "9999px" : theme.radius, background: "var(--spark-surface)" }}
                 >
                   <EditablePrice
                     value={p}
@@ -455,7 +458,7 @@ export function SparkComponent({
                 className={`font-bold transition active:scale-[0.98] ${jar ? "py-4 text-[18px]" : "py-3 text-[14px]"}`}
                 style={{
                   borderRadius: jar ? "9999px" : theme.radius,
-                  background: active ? accent : "var(--color-surface)",
+                  background: active ? accent : "var(--spark-surface)",
                   color: active ? "#fff" : theme.ink,
                   boxShadow: active ? `0 10px 24px ${accent}55` : undefined,
                 }}
@@ -501,7 +504,7 @@ export function SparkComponent({
           ))}
           {people > 8 && <span className="self-center text-[12px] text-muted">+{people - 8}</span>}
         </div>
-        <div className="flex items-center justify-between rounded-xl bg-surface px-4 py-3">
+        <div className="flex items-center justify-between rounded-xl bg-[var(--spark-surface)] px-4 py-3">
           <span className="text-[13px] font-semibold text-muted">Splitting with</span>
           <div className="flex items-center gap-3">
             <button
@@ -562,7 +565,7 @@ export function SparkComponent({
             {pct}%
           </p>
         </div>
-        <div className="h-3 overflow-hidden rounded-full bg-surface">
+        <div className="h-3 overflow-hidden rounded-full bg-[var(--spark-surface)]">
           <div className="h-full transition-all" style={{ width: `${pct}%`, background: accent }} />
         </div>
         <p className="mt-2 text-[13px] text-muted">
@@ -592,7 +595,7 @@ export function SparkComponent({
         <p className="mb-2 text-[13px] font-bold" style={{ color: theme.ink }}>
           {c.label ?? "Round up your purchase"}
         </p>
-        <div className="rounded-xl bg-surface px-4 py-3">
+        <div className="rounded-xl bg-[var(--spark-surface)] px-4 py-3">
           <p className="text-[12px] uppercase tracking-wide text-muted">Your purchase</p>
           <p className="display text-[28px] font-extrabold" style={{ color: theme.ink }}>
             ${c.purchaseUsd.toFixed(2)}
@@ -613,7 +616,7 @@ export function SparkComponent({
                 className="px-4 py-2.5 text-[13px] font-bold transition"
                 style={{
                   borderRadius: theme.radius,
-                  background: active ? accent : "var(--color-surface)",
+                  background: active ? accent : "var(--spark-surface)",
                   color: active ? "#fff" : theme.ink,
                 }}
               >
@@ -651,7 +654,7 @@ export function SparkComponent({
           placeholder={c.placeholder}
           rows={3}
           className={`w-full resize-none px-3 py-2.5 text-[14px] outline-none placeholder:text-faint ${
-            terminal ? "rounded-md border border-white/10 bg-black/40 font-mono text-green-300" : "rounded-2xl bg-surface"
+            terminal ? "rounded-md border border-white/10 bg-black/40 font-mono text-green-300" : "rounded-2xl bg-[var(--spark-surface)]"
           }`}
         />
         {editable && (
@@ -728,7 +731,7 @@ export function SparkComponent({
             {filled}/{c.capacity} {unit}
           </p>
         </div>
-        <div className="h-3 overflow-hidden rounded-full bg-surface">
+        <div className="h-3 overflow-hidden rounded-full bg-[var(--spark-surface)]">
           <div className="h-full transition-all" style={{ width: `${pct}%`, background: nearlyFull ? "var(--color-warn)" : accent }} />
         </div>
         <p className="mt-2 text-[12px] text-muted">
@@ -802,9 +805,9 @@ export function SparkComponent({
         <div className="flex items-center gap-4">
           <div
             className="relative flex h-20 w-20 shrink-0 items-center justify-center rounded-full"
-            style={{ background: `conic-gradient(${accent} ${pct}%, var(--color-surface) 0)` }}
+            style={{ background: `conic-gradient(${accent} ${pct}%, var(--spark-surface) 0)` }}
           >
-            <div className="flex h-14 w-14 flex-col items-center justify-center rounded-full bg-surface">
+            <div className="flex h-14 w-14 flex-col items-center justify-center rounded-full bg-[var(--spark-surface)]">
               <span className="text-[10px] font-bold uppercase text-muted">Round</span>
               <span className="display text-[18px] font-extrabold" style={{ color: accent }}>
                 {c.roundNumber}

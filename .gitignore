@@ -22,6 +22,7 @@
 
 # walrus CLI export staging (public blobs uploaded via `walrus store`)
 .walrus-public/
+scripts/bistro-images/
 
 # misc
 .DS_Store

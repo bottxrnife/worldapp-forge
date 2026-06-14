@@ -6,7 +6,8 @@ import { PunchCard } from "@/components/PunchCard";
 import { RestaurantApp } from "@/components/RestaurantApp";
 import { isInteractiveComponent, SparkComponent } from "@/components/SparkComponents";
 import { SparkCta, SparkShell } from "@/components/SparkShell";
-import { WalrusProof } from "@/components/WalrusProof";
+import { WalrusProofList } from "@/components/WalrusProof";
+import { walrusAssets } from "@/lib/walrusAssets";
 import { Pill } from "@/components/ui";
 import { VerifyButton } from "@/components/VerifyButton";
 import { useAuth } from "@/lib/auth";
@@ -753,12 +754,7 @@ export function ManifestRunner({
         </div>
       )}
 
-      {manifest.storage?.manifestBlobId && (
-        <WalrusProof blobId={manifest.storage.manifestBlobId} label="Walrus manifest" />
-      )}
-      {manifest.storage?.imageBlobId && (
-        <WalrusProof blobId={manifest.storage.imageBlobId} label="Cover on Walrus" />
-      )}
+      <WalrusProofList assets={walrusAssets(manifest)} />
     </SparkShell>
   );
 }
