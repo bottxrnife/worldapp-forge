@@ -57,7 +57,9 @@ src/
 │       └── pay-nonce                  reference id for MiniKit.pay
 ├── components/
 │   ├── FloatingNav.tsx      Floating oval tab bar (Home/Apps/Create FAB/Activity/Profile); truly fixed (own compositing layer)
-│   ├── ManifestRunner.tsx   Schema-driven runtime: components + pay + loyalty + ordering + done
+│   ├── ManifestRunner.tsx   Schema-driven runtime: pay + loyalty + done; delegates menu → RestaurantApp, punch → PunchCard
+│   ├── RestaurantApp.tsx    Full ordering mini-app for `menu` Sparks: Order / Rewards / History tabs + pickup code
+│   ├── PunchCard.tsx        Loyalty pass UI for `punchCard` Sparks (stamp grid + points)
 │   ├── VerifyButton.tsx     World ID gate (IDKit widget + simulated fallback)
 │   └── ui.tsx               Button, Card, Pill
 └── lib/
@@ -68,9 +70,9 @@ src/
     ├── ens.ts               viem ENS reads (resolve, reverse, text records)
     ├── walrus.ts            Walrus HTTP store/read (publisher/aggregator): storeBlob (text), storeBytes (images), readBlob
     ├── catalog.ts           In-memory catalog index (seeds + published) + manifest cache
-    ├── seeds.ts             8 built-in sample apps (build() helper)
+    ├── seeds.ts             ~20 built-in sample Sparks (pay/claim/punch/menu builders) + POINTS_REWARDS
     ├── appStyle.ts          per-app emoji + accent + tint
-    ├── store.ts             localStorage: loyalty, activity, orders
+    ├── store.ts             localStorage: loyalty, activity, orders (+ spendPoints rewards marketplace)
     ├── pay.ts               payWorld() — MiniKit.pay (USDC/World Chain) + simulated fallback
     ├── nullifiers.ts        used-nullifier store (one-per-human)
     └── useWorldAuth.ts      walletAuth sign-in hook
@@ -93,7 +95,7 @@ src/
 - **Activity** — total points, your loyalty passes, and the activity/receipts feed (localStorage).
 - **Floating oval nav** — Home / Apps / center **Create FAB** / Activity / Profile, visible on every tab and **truly fixed** (own compositing layer so it doesn't drift on fast scroll).
 
-**Built-in sample apps (`seeds.ts`):** Team Dues, Cafe Punch Card, Split the Bill, DAO Vote, Community Raffle, Tip Jar, Corner Bistro (menu + points), Event RSVP.
+**Built-in sample Sparks (`seeds.ts`, ~20 across all 5 categories, each with a tagline + rating/runs/reviews):** Team Dues, Split the Bill, Coffee Tip Jar, Burger Block Rewards (punch), Article Unlock, Corner Bistro (menu → RestaurantApp), Bean Counter Café (punch), DAO Vote, Savings Circle, Community Fundraiser, Club Membership Pass, Charity Round-Up, Research Agent Market, Trip Planner Agent, Community Raffle, Ticket Claim, Event RSVP, Parking Meter, Transit Top-Up. The `menu` Spark renders the full tabbed ordering UI; `punchCard` Sparks render the loyalty pass; `POINTS_REWARDS` powers the Rewards tab.
 
 ---
 
@@ -169,6 +171,7 @@ In a desktop browser you get the full UI, the agent, Walrus publishing, and the 
 
 | Date | Author | Change |
 |---|---|---|
+| 2026-06-13 | Build agent | **Restored the full sample-app set + rich runtime interface (ported from DappDock).** Rewrote `seeds.ts` into ~20 showcase Sparks across all five categories using `pay`/`claim`/`punch`/`menu` builders, each with a `tagline` + `stats` (rating/runs/reviews) + `featured` (new optional display fields on `DappManifest`; the catalog/Sparks cards now show ★ rating · runs). Reframed every workflow for Forge's sponsors — payments settle in the **World wallet on World Chain** (dropped all LI.FI/`sourceChain` wording, no Composer app). Ported the **full interface**: new `RestaurantApp` (Order / Rewards / History tabs, cart, points marketplace, pickup-code confirmation) that `ManifestRunner` delegates every `menu` Spark to, and a new `PunchCard` pass that it uses for `punchCard` Sparks. Added `store.spendPoints` + `OrderRecord.userHandle/simulated`, and `POINTS_REWARDS`. `npm run build` clean. |
 | 2026-06-13 | Build agent (3 subagents) | **Sparks page + Walrus images + Activity + fixed nav.** (1) **Sparks (catalog)** rebuilt World-App-style: a **Featured** horizontal rail + per-category rails (vertical page + horizontal scroll) + category chips; `AppRecord` gained `imageBlobId`/`featured`. (2) **Walrus images now work end-to-end** — `walrus.storeBytes`, `POST /api/upload` (raw bytes, ≤5MB), `GET /api/blob/[id]` (aggregator read proxy); publish has an optional **cover image** picker; `validateManifest` + `/api/publish` preserve `storage.imageBlobId`; the image shows on the Sparks cards + run page + `ManifestRunner`. (3) **Rewards → Activity** (`/activity`): activity feed leads, plus total points + loyalty passes; old `/rewards` removed. (4) **FloatingNav**: Activity tab; bar is now **truly fixed** (`translateZ(0)` compositing layer, `z-50`) so it no longer drifts on fast scroll. `npm run build` clean; deployed to Vercel. |
 | 2026-06-13 | Build agent | **Ported workflow + floating oval nav + Rewards.** Floating oval tab bar (Home/Apps/center Create FAB/Rewards/Profile) visible on every tab; Create is no longer fullscreen (composer floats above the bar). Ported the working runtime: `MiniKit.pay` (USDC/World Chain) with simulated fallback (`lib/pay.ts`, `/api/pay-nonce`), punch-card stamping + points, `menu` ordering with a pickup code, activity receipts, and a Rewards hub backed by a `localStorage` store (`lib/store.ts`). Expanded to 8 built-in sample apps with per-app emoji/accent (`appStyle.ts`). Flipped the Developer Portal app to **mini-app** mode and renamed it **Forge** via the MCP. |
 | 2026-06-13 | Build agent | **Walrus storage + catalog + run loop.** `lib/walrus.ts` (HTTP publisher/aggregator), `lib/catalog.ts` index, and `/api/publish` `/api/catalog` `/api/app/[ens]` + the catalog/run pages. |

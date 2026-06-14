@@ -33,6 +33,10 @@ export type DappManifest = {
   workflow: { provider: string; flowId: string; steps: WorkflowStep[] };
   /** Where the canonical copy of this manifest + media lives (Walrus blob ids). */
   storage?: { manifestBlobId?: string; imageBlobId?: string };
+  /** Display-only metadata for the catalog (seeds set these; not part of the runtime contract). */
+  tagline?: string;
+  featured?: boolean;
+  stats?: { rating: number; runs: number; reviews: number };
   version: string;
 };
 

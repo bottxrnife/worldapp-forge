@@ -51,8 +51,15 @@ function SparkCard({ a, featured = false }: { a: AppRecord; featured?: boolean }
       </div>
       <p className={`mt-2.5 truncate font-bold ${featured ? "text-[15px]" : "text-[13.5px]"}`}>{a.name}</p>
       <p className={`mt-1 line-clamp-2 text-muted ${featured ? "text-[13px]" : "text-[12px] leading-snug"}`}>
-        {a.description}
+        {a.tagline ?? a.description}
       </p>
+      {a.stats && (
+        <p className="mt-1.5 text-[11.5px] font-semibold text-faint">
+          <span className="text-ink">★ {a.stats.rating.toFixed(1)}</span>
+          {" · "}
+          {a.stats.runs.toLocaleString()} runs
+        </p>
+      )}
     </Link>
   );
 }

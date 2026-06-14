@@ -22,6 +22,8 @@ export type OrderRecord = {
   items: { name: string; qty: number }[];
   totalUsd: number;
   points: number;
+  userHandle?: string;
+  simulated?: boolean;
   ts: number;
 };
 
@@ -78,6 +80,15 @@ export function redeemReward(ens: string): LoyaltyRecord {
   all[ens] = next;
   write(K.loyalty, all);
   return next;
+}
+/** Spend accrued points (rewards marketplace). Returns false if not enough. */
+export function spendPoints(ens: string, cost: number): boolean {
+  const all = getLoyalty();
+  const cur = all[ens] ?? { punches: 0, points: 0, redeemed: 0 };
+  if (cur.points < cost) return false;
+  all[ens] = { ...cur, points: cur.points - cost, redeemed: cur.redeemed + 1 };
+  write(K.loyalty, all);
+  return true;
 }
 
 export function getActivity(): ActivityEntry[] {
