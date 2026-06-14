@@ -1,8 +1,10 @@
 "use client";
 
 import { Icon } from "@/components/Icon";
+import { SparkCta, SparkShell } from "@/components/SparkShell";
 import { useAuth } from "@/lib/auth";
 import { payWorld } from "@/lib/pay";
+import { sparkTheme } from "@/lib/sparkTheme";
 import { POINTS_REWARDS } from "@/lib/seeds";
 import {
   addOrder,
@@ -38,8 +40,8 @@ function ItemThumb({ it }: { it: MenuItem }) {
     );
   }
   return (
-    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-brand-soft">
-      <Icon name={itemIcon(it.name)} className="text-brand-strong" />
+    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[var(--spark-soft,var(--color-brand-soft))]">
+      <Icon name={itemIcon(it.name)} className="text-[var(--spark-accent,var(--color-brand))]" />
     </div>
   );
 }
@@ -51,6 +53,7 @@ function ItemThumb({ it }: { it: MenuItem }) {
  */
 export function RestaurantApp({ manifest }: { manifest: DappManifest }) {
   const ens = manifest.ensName;
+  const theme = sparkTheme(manifest);
   const { user } = useAuth();
   const handle = user?.guest ? "guest" : user?.username ? `@${user.username}` : short(user?.address);
 
@@ -134,27 +137,31 @@ export function RestaurantApp({ manifest }: { manifest: DappManifest }) {
   }
 
   return (
-    <div className="flex flex-col gap-3">
-      {/* header: title + live points */}
+    <SparkShell manifest={manifest}>
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <p className="truncate text-[16px] font-extrabold">{manifest.name}</p>
-          <p className="truncate text-[12px] font-semibold text-blue-link">{ens}</p>
+          <p className="truncate text-[12px] font-bold uppercase tracking-wide" style={{ color: theme.accent }}>
+            Open for orders
+          </p>
+          <p className="truncate text-[13px] font-semibold text-muted">{ens}</p>
         </div>
-        <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-ink-panel px-3.5 py-2 text-[13px] font-bold text-white">
-          <Icon name="star" solid size={12} className="text-brand" /> {points.toLocaleString()} pts
+        <span
+          className="inline-flex shrink-0 items-center gap-1 px-3.5 py-2 text-[13px] font-bold text-white"
+          style={{ background: theme.ink, borderRadius: theme.radius }}
+        >
+          <Icon name="star" solid size={12} /> {points.toLocaleString()} pts
         </span>
       </div>
 
-      {/* tabs */}
-      <div className="flex rounded-full bg-wash p-1.5">
+      <div className="flex p-1.5" style={{ background: theme.soft, borderRadius: theme.radius }}>
         {(["order", "rewards", "history"] as Tab[]).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
-            className={`flex-1 rounded-full py-2.5 text-[13.5px] font-bold capitalize transition ${
+            className={`flex-1 py-2.5 text-[13.5px] font-bold capitalize transition ${
               tab === t ? "bg-surface text-ink shadow-soft" : "text-muted"
             }`}
+            style={{ borderRadius: theme.radius }}
           >
             {t}
           </button>
@@ -168,14 +175,14 @@ export function RestaurantApp({ manifest }: { manifest: DappManifest }) {
       {/* ── Order ── */}
       {tab === "order" && (
         <>
-          <div className="rounded-2xl bg-blue-soft px-4 py-2.5 text-[12.5px] font-semibold text-blue-body">
+          <div className="px-4 py-2.5 text-[12.5px] font-semibold" style={{ background: theme.soft, color: theme.ink, borderRadius: theme.radius }}>
             Earn {ppd} points for every $1 — redeem them on the Rewards tab.
           </div>
           {grouped.map(([tag, group]) => (
             <div key={tag} className="flex flex-col gap-2">
               <p className="mt-1 text-[12px] font-bold uppercase tracking-wide text-muted">{tag}</p>
               {group.map((it) => (
-                <div key={it.id} className="flex items-center justify-between gap-3 rounded-2xl bg-wash px-3 py-2.5">
+                <div key={it.id} className="flex items-center justify-between gap-3 px-3 py-2.5" style={{ background: theme.soft, borderRadius: theme.radius }}>
                   <div className="flex min-w-0 items-center gap-3">
                     <ItemThumb it={it} />
                     <div className="min-w-0">
@@ -188,12 +195,16 @@ export function RestaurantApp({ manifest }: { manifest: DappManifest }) {
                   </div>
                   {cart[it.id] ? (
                     <div className="flex items-center gap-3">
-                      <button onClick={() => remove(it.id)} className="h-7 w-7 rounded-full bg-blue-soft text-blue-link">−</button>
+                      <button onClick={() => remove(it.id)} className="h-7 w-7 rounded-full bg-surface font-bold" style={{ color: theme.accent }}>−</button>
                       <span className="w-4 text-center text-sm font-bold">{cart[it.id]}</span>
-                      <button onClick={() => add(it.id)} className="h-7 w-7 rounded-full bg-blue-soft text-blue-link">+</button>
+                      <button onClick={() => add(it.id)} className="h-7 w-7 rounded-full bg-surface font-bold" style={{ color: theme.accent }}>+</button>
                     </div>
                   ) : (
-                    <button onClick={() => add(it.id)} className="rounded-full bg-blue-soft px-3.5 py-1.5 text-[13px] font-bold text-blue-link">
+                    <button
+                      onClick={() => add(it.id)}
+                      className="px-3.5 py-1.5 text-[13px] font-bold text-white"
+                      style={{ background: theme.accent, borderRadius: theme.radius }}
+                    >
                       Add
                     </button>
                   )}
@@ -201,17 +212,13 @@ export function RestaurantApp({ manifest }: { manifest: DappManifest }) {
               ))}
             </div>
           ))}
-          <button
-            onClick={placeAndPay}
-            disabled={cartCount === 0 || paying}
-            className="mt-1 rounded-3xl bg-cta px-5 py-4 text-[15px] font-bold text-cta-text transition active:scale-[0.98] disabled:opacity-50"
-          >
+          <SparkCta theme={theme} disabled={cartCount === 0 || paying} onClick={placeAndPay}>
             {paying
               ? "Placing your order…"
               : cartCount === 0
                 ? "Add items to your order"
                 : `Place order · $${cartTotal.toFixed(2)} (+${Math.round(cartTotal * ppd)} pts)`}
-          </button>
+          </SparkCta>
         </>
       )}
 
@@ -337,6 +344,6 @@ export function RestaurantApp({ manifest }: { manifest: DappManifest }) {
           </div>
         </div>
       )}
-    </div>
+    </SparkShell>
   );
 }

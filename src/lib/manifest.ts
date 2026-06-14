@@ -10,7 +10,26 @@ export type ValidationResult =
   | { ok: true; manifest: DappManifest; warnings: string[] }
   | { ok: false; errors: string[] };
 
-const COMPONENT_TYPES = ["amountInput", "recipient", "memoInput", "punchCard", "menu", "submitButton"];
+const COMPONENT_TYPES = [
+  "amountInput",
+  "recipient",
+  "memoInput",
+  "punchCard",
+  "menu",
+  "submitButton",
+  "choiceGroup",
+  "durationPicker",
+  "stepper",
+  "tipPresets",
+  "splitBill",
+  "progressGoal",
+  "roundUp",
+  "infoCard",
+  "textArea",
+  "transitPass",
+  "membershipCard",
+  "savingsRound",
+];
 const CATEGORIES = ["Finance", "Community", "Agents", "Events", "Tools"];
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -62,6 +81,52 @@ export function validateManifest(input: any, creator = "a human"): ValidationRes
       } else if (new Set(items.map((it: { id: string }) => it.id)).size !== items.length) {
         errors.push("menu item ids must be unique");
       }
+    }
+    if (c?.type === "choiceGroup") {
+      const opts = Array.isArray(c.options) ? c.options : [];
+      if (!c.key || !c.label || opts.length < 2) errors.push("choiceGroup needs key, label, and at least 2 options");
+    }
+    if (c?.type === "durationPicker") {
+      if (
+        !c.key ||
+        typeof c.minMinutes !== "number" ||
+        typeof c.maxMinutes !== "number" ||
+        typeof c.stepMinutes !== "number" ||
+        typeof c.pricePerHourUsd !== "number" ||
+        c.minMinutes >= c.maxMinutes
+      ) {
+        errors.push("durationPicker needs key, minMinutes < maxMinutes, stepMinutes, pricePerHourUsd");
+      }
+    }
+    if (c?.type === "stepper") {
+      if (!c.key || typeof c.min !== "number" || typeof c.max !== "number" || c.min >= c.max) {
+        errors.push("stepper needs key, min < max, and default");
+      }
+    }
+    if (c?.type === "splitBill" && (typeof c.totalUsd !== "number" || c.totalUsd <= 0)) {
+      errors.push("splitBill needs a positive totalUsd");
+    }
+    if (c?.type === "progressGoal" && (typeof c.goalUsd !== "number" || c.goalUsd <= 0)) {
+      errors.push("progressGoal needs a positive goalUsd");
+    }
+    if (c?.type === "roundUp" && (typeof c.purchaseUsd !== "number" || c.purchaseUsd < 0)) {
+      errors.push("roundUp needs a non-negative purchaseUsd");
+    }
+    if (c?.type === "infoCard" && (!c.title || !Array.isArray(c.lines) || c.lines.length < 1)) {
+      errors.push("infoCard needs title and at least one line");
+    }
+    if (c?.type === "textArea" && (!c.key || !c.label)) errors.push("textArea needs key and label");
+    if (c?.type === "transitPass" && (!Array.isArray(c.presets) || c.presets.length < 1)) {
+      errors.push("transitPass needs at least one preset amount");
+    }
+    if (c?.type === "membershipCard" && (!c.tier || !Array.isArray(c.benefits) || c.benefits.length < 1)) {
+      errors.push("membershipCard needs tier and benefits");
+    }
+    if (c?.type === "savingsRound" && (!c.payoutTo || typeof c.contributionUsd !== "number")) {
+      errors.push("savingsRound needs payoutTo and contributionUsd");
+    }
+    if (c?.type === "tipPresets" && (!Array.isArray(c.presets) || c.presets.length < 1)) {
+      errors.push("tipPresets needs at least one preset amount");
     }
   }
 

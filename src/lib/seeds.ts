@@ -1,11 +1,6 @@
 /**
  * Built-in sample Sparks. These are the showcase apps that ship with Forge so
  * the catalog, runtime, loyalty, and ordering are populated out of the box.
- *
- * Reframed for Forge's sponsors (World + ENS + Walrus): payments settle in the
- * user's World wallet on World Chain (no third-party routing), names live under
- * the Forge ENS domain, and human-only Sparks gate on World ID. Every manifest
- * is the same schema the agent emits + the runtime renders.
  */
 import { APP } from "./config";
 import type { DappManifest, ManifestComponent } from "./types";
@@ -63,9 +58,13 @@ function compose(b: Base, components: ManifestComponent[], cap: string): DappMan
   };
 }
 
-/** Fixed- or variable-amount payment Spark: amount + recipient (+ optional memo). */
-function pay(b: Base, o: { amount: string; recipient: string; memo?: string; locked?: boolean }): DappManifest {
+function pay(
+  b: Base,
+  o: { amount: string; recipient: string; memo?: string; locked?: boolean },
+  extras: ManifestComponent[] = [],
+): DappManifest {
   const c: ManifestComponent[] = [
+    ...extras,
     { type: "amountInput", token: "USDC", default: o.amount, locked: o.locked },
     { type: "recipient", value: o.recipient },
   ];
@@ -74,17 +73,17 @@ function pay(b: Base, o: { amount: string; recipient: string; memo?: string; loc
   return compose(b, c, `${o.amount} USDC`);
 }
 
-/** Proof-of-human claim Spark with no payment (vote / raffle / ticket). */
-function claim(b: Base): DappManifest {
-  return compose(b, [{ type: "submitButton", label: b.submit }], b.cap ?? "$0.00");
+function claim(b: Base, extras: ManifestComponent[] = []): DappManifest {
+  return compose(b, [...extras, { type: "submitButton", label: b.submit }], b.cap ?? "$0.00");
 }
 
-/** Loyalty Spark: a punch card + a fixed purchase that stamps it. */
 function punchApp(
   b: Base,
   o: { amount: string; recipient: string; total: number; reward: string; ppd: number; memo?: string },
+  extras: ManifestComponent[] = [],
 ): DappManifest {
   const c: ManifestComponent[] = [
+    ...extras,
     { type: "punchCard", total: o.total, reward: o.reward, pointsPerDollar: o.ppd },
     { type: "amountInput", token: "USDC", default: o.amount, locked: true },
     { type: "recipient", value: o.recipient },
@@ -94,7 +93,6 @@ function punchApp(
   return compose(b, c, `${o.amount} USDC`);
 }
 
-/** Ordering Spark: a menu cart → pay the total → earn points (RestaurantApp). */
 function menuApp(
   b: Base,
   o: { recipient: string; ppd: number; items: { id: string; name: string; priceUsd: number; desc?: string; tag?: string }[] },
@@ -133,6 +131,14 @@ export const SEED_APPS: DappManifest[] = [
       ],
     },
     { amount: "5", recipient: ens("treasury"), memo: "June team dinner", locked: true },
+    [
+      {
+        type: "infoCard",
+        title: "Design Guild · June round",
+        badge: "Team",
+        lines: ["12 / 15 members paid", "Treasury: design-guild.treasury.eth", "Due by Jun 30"],
+      },
+    ],
   ),
   pay(
     {
@@ -150,7 +156,15 @@ export const SEED_APPS: DappManifest[] = [
         ["Settle to the group pot", "A single payment on World Chain"],
       ],
     },
-    { amount: "12", recipient: ens("group"), memo: "Dinner", locked: false },
+    { amount: "12", recipient: ens("group"), memo: "Dinner", locked: true },
+    [
+      {
+        type: "infoCard",
+        title: "Friday dinner · Ramen House",
+        lines: ["Table 7 · 6:30 PM", "Bill total split evenly"],
+      },
+      { type: "splitBill", totalUsd: 72, defaultPeople: 6, label: "Split evenly" },
+    ],
   ),
   pay(
     {
@@ -169,6 +183,7 @@ export const SEED_APPS: DappManifest[] = [
       ],
     },
     { amount: "2", recipient: ens("barista"), memo: "Thanks!", locked: false },
+    [{ type: "tipPresets", presets: [1, 2, 3, 5], label: "Quick tip" }],
   ),
   punchApp(
     {
@@ -194,6 +209,19 @@ export const SEED_APPS: DappManifest[] = [
       ],
     },
     { amount: "8", recipient: ens("burgerblock"), total: 10, reward: "Classic Smash Burger", ppd: 100, memo: "Combo #1" },
+    [
+      {
+        type: "choiceGroup",
+        key: "combo",
+        label: "Pick your combo",
+        options: [
+          { value: "classic", label: "Classic Smash", hint: "$8" },
+          { value: "double", label: "Double Smash", hint: "$10" },
+          { value: "veggie", label: "Veggie Block", hint: "$7" },
+        ],
+        default: "classic",
+      },
+    ],
   ),
   pay(
     {
@@ -213,6 +241,18 @@ export const SEED_APPS: DappManifest[] = [
       ],
     },
     { amount: "0.5", recipient: ens("newsroom"), locked: true },
+    [
+      {
+        type: "infoCard",
+        title: "The Future of Human-Verified Apps",
+        badge: "Premium",
+        lines: [
+          "8 min read · Tech",
+          "World ID, ENS names, and schema-driven mini-apps are changing how humans interact with on-chain services…",
+          "$0.50 to unlock the full article",
+        ],
+      },
+    ],
   ),
 
   // ── Community ──────────────────────────────────────────────────────────
@@ -276,27 +316,60 @@ export const SEED_APPS: DappManifest[] = [
       ],
     },
     { amount: "5", recipient: ens("beancounter"), total: 8, reward: "Latte", ppd: 100, memo: "Oat flat white" },
-  ),
-  claim({
-    label: "daovote",
-    name: "DAO Vote",
-    tagline: "One verified human, one vote",
-    description: "Launch a one-per-human vote in minutes. No tokens, no sybils — just verified humans.",
-    category: "Community",
-    outcome: "You will cast one vote. One vote per verified human.",
-    perms: ["Check you are a unique human", "Record your single vote"],
-    worldId: true,
-    policy: "one-vote-per-human",
-    submit: "Cast my vote",
-    featured: true,
-    creator: "govworks.creator.eth",
-    stats: { rating: 4.7, runs: 980, reviews: 210 },
-    steps: [
-      ["Verify you are human", "World ID proof, nothing else shared"],
-      ["Open the ballot", "Proposal loaded from ENS records"],
-      ["Record your vote", "One vote per verified human"],
+    [
+      {
+        type: "choiceGroup",
+        key: "drink",
+        label: "Your order",
+        options: [
+          { value: "flat", label: "Oat flat white", hint: "$5" },
+          { value: "cold", label: "Cold brew", hint: "$4" },
+          { value: "matcha", label: "Iced matcha", hint: "$5.50" },
+        ],
+        default: "flat",
+      },
     ],
-  }),
+  ),
+  claim(
+    {
+      label: "daovote",
+      name: "DAO Vote",
+      tagline: "One verified human, one vote",
+      description: "Launch a one-per-human vote in minutes. No tokens, no sybils — just verified humans.",
+      category: "Community",
+      outcome: "You will cast one vote. One vote per verified human.",
+      perms: ["Check you are a unique human", "Record your single vote"],
+      worldId: true,
+      policy: "one-vote-per-human",
+      submit: "Cast my vote",
+      featured: true,
+      creator: "govworks.creator.eth",
+      stats: { rating: 4.7, runs: 980, reviews: 210 },
+      steps: [
+        ["Verify you are human", "World ID proof, nothing else shared"],
+        ["Open the ballot", "Proposal loaded from ENS records"],
+        ["Record your vote", "One vote per verified human"],
+      ],
+    },
+    [
+      {
+        type: "infoCard",
+        title: "Prop #12 · Fund the community garden",
+        badge: "Active ballot",
+        lines: ["Allocate $2,000 USDC from treasury", "Closes in 3 days · 847 votes cast"],
+      },
+      {
+        type: "choiceGroup",
+        key: "vote",
+        label: "Your vote",
+        options: [
+          { value: "yes", label: "Yes — fund the garden" },
+          { value: "no", label: "No — keep funds" },
+          { value: "abstain", label: "Abstain" },
+        ],
+      },
+    ],
+  ),
   pay(
     {
       label: "savings",
@@ -317,7 +390,8 @@ export const SEED_APPS: DappManifest[] = [
         ["Record your contribution", "One per verified human"],
       ],
     },
-    { amount: "20", recipient: ens("circle"), memo: "Round 3", locked: false },
+    { amount: "20", recipient: ens("circle"), memo: "Round 3", locked: true },
+    [{ type: "savingsRound", roundNumber: 3, payoutTo: "alex.eth", contributionUsd: 20, members: 8 }],
   ),
   pay(
     {
@@ -341,6 +415,19 @@ export const SEED_APPS: DappManifest[] = [
       ],
     },
     { amount: "10", recipient: ens("fund"), memo: "Mutual aid", locked: false },
+    [
+      {
+        type: "infoCard",
+        title: "Neighborhood mutual aid fund",
+        lines: ["Emergency groceries & transit for verified neighbors"],
+      },
+      { type: "progressGoal", goalUsd: 5000, raisedUsd: 2840, supporters: 142, label: "Goal progress" },
+      {
+        type: "tipPresets",
+        presets: [5, 10, 25, 50],
+        label: "Suggested contribution",
+      },
+    ],
   ),
   pay(
     {
@@ -363,6 +450,14 @@ export const SEED_APPS: DappManifest[] = [
       ],
     },
     { amount: "15", recipient: ens("clubhouse"), locked: true },
+    [
+      {
+        type: "membershipCard",
+        tier: "Forge Creators Club",
+        priceUsd: 15,
+        benefits: ["Weekly coworking hours", "Member-only Spark demos", "Priority event RSVP", "Shared treasury voting"],
+      },
+    ],
   ),
   pay(
     {
@@ -384,7 +479,15 @@ export const SEED_APPS: DappManifest[] = [
         ["Join the supporter wall", "One entry per verified human"],
       ],
     },
-    { amount: "2", recipient: ens("cause"), memo: "Spare-change round-up", locked: false },
+    { amount: "0.57", recipient: ens("cause"), memo: "Spare-change round-up", locked: true },
+    [
+      {
+        type: "infoCard",
+        title: "Clean water initiative",
+        lines: ["Your spare change funds verified wells in rural communities"],
+      },
+      { type: "roundUp", purchaseUsd: 7.43, label: "Round up from your $7.43 purchase" },
+    ],
   ),
 
   // ── Agents ─────────────────────────────────────────────────────────────
@@ -408,6 +511,25 @@ export const SEED_APPS: DappManifest[] = [
       ],
     },
     { amount: "10", recipient: ens("agentmarket"), locked: false },
+    [
+      {
+        type: "choiceGroup",
+        key: "agent",
+        label: "Choose an agent",
+        options: [
+          { value: "atlas", label: "Atlas Research", hint: "$10 · markets" },
+          { value: "scribe", label: "Scribe Digest", hint: "$8 · summaries" },
+          { value: "lens", label: "Lens Analyst", hint: "$12 · deep dive" },
+        ],
+      },
+      {
+        type: "textArea",
+        key: "task",
+        label: "What should the agent research?",
+        placeholder: "e.g. Compare Walrus vs IPFS for mini-app manifests…",
+        required: true,
+      },
+    ],
   ),
   pay(
     {
@@ -428,63 +550,134 @@ export const SEED_APPS: DappManifest[] = [
       ],
     },
     { amount: "6", recipient: ens("wander"), locked: false },
+    [
+      {
+        type: "choiceGroup",
+        key: "vibe",
+        label: "Trip style",
+        options: [
+          { value: "budget", label: "Budget explorer", hint: "~$6" },
+          { value: "food", label: "Food & culture", hint: "~$8" },
+          { value: "luxury", label: "Comfort first", hint: "~$12" },
+        ],
+      },
+      {
+        type: "textArea",
+        key: "brief",
+        label: "Trip brief",
+        placeholder: "Tokyo · 5 nights in May · love ramen and museums · $150/day budget",
+        required: true,
+      },
+    ],
   ),
 
   // ── Events ─────────────────────────────────────────────────────────────
-  claim({
-    label: "raffle",
-    name: "Community Raffle",
-    tagline: "One entry per verified human",
-    description: "Enter a transparent raffle — one entry per verified human, winners picked fairly.",
-    category: "Events",
-    outcome: "You will enter the raffle once.",
-    perms: ["Check you are a unique human", "Record your single entry"],
-    worldId: true,
-    policy: "one-entry-per-human",
-    submit: "Enter raffle",
-    creator: "fairdraw.creator.eth",
-    stats: { rating: 4.6, runs: 1280, reviews: 190 },
-    steps: [
-      ["Verify you are human", "Keeps the draw fair"],
-      ["Add your entry", "One per verified human"],
+  claim(
+    {
+      label: "raffle",
+      name: "Community Raffle",
+      tagline: "One entry per verified human",
+      description: "Enter a transparent raffle — one entry per verified human, winners picked fairly.",
+      category: "Events",
+      outcome: "You will enter the raffle once.",
+      perms: ["Check you are a unique human", "Record your single entry"],
+      worldId: true,
+      policy: "one-entry-per-human",
+      submit: "Enter raffle",
+      creator: "fairdraw.creator.eth",
+      stats: { rating: 4.6, runs: 1280, reviews: 190 },
+      steps: [
+        ["Verify you are human", "Keeps the draw fair"],
+        ["Add your entry", "One per verified human"],
+      ],
+    },
+    [
+      {
+        type: "infoCard",
+        title: "Forge Launch Party raffle",
+        badge: "Prize pool",
+        lines: ["Grand prize: $500 USDC", "5 runner-up $50 gift cards", "Draw: Jun 20 · 2,340 entries"],
+      },
     ],
-  }),
-  claim({
-    label: "tickets",
-    name: "Ticket Claim",
-    tagline: "Claim your event pass",
-    description: "Claim your event pass. One pass per verified human — show it at the door.",
-    category: "Events",
-    outcome: "You will claim one event pass. One per verified human.",
-    perms: ["Check you are a unique human", "Mint your event pass"],
-    worldId: true,
-    policy: "one-claim-per-human",
-    submit: "Claim my pass",
-    creator: "eventworks.creator.eth",
-    stats: { rating: 4.8, runs: 1502, reviews: 388 },
-    steps: [
-      ["Verify you are human", "One pass per person"],
-      ["Issue your pass", "Show it at the door"],
+  ),
+  claim(
+    {
+      label: "tickets",
+      name: "Ticket Claim",
+      tagline: "Claim your event pass",
+      description: "Claim your event pass. One pass per verified human — show it at the door.",
+      category: "Events",
+      outcome: "You will claim one event pass. One per verified human.",
+      perms: ["Check you are a unique human", "Mint your event pass"],
+      worldId: true,
+      policy: "one-claim-per-human",
+      submit: "Claim my pass",
+      creator: "eventworks.creator.eth",
+      stats: { rating: 4.8, runs: 1502, reviews: 388 },
+      steps: [
+        ["Verify you are human", "One pass per person"],
+        ["Issue your pass", "Show it at the door"],
+      ],
+    },
+    [
+      {
+        type: "infoCard",
+        title: "Forge Demo Day",
+        badge: "Jun 14",
+        lines: ["Brooklyn Navy Yard · Doors 6 PM", "Show your pass at check-in"],
+      },
+      {
+        type: "choiceGroup",
+        key: "tier",
+        label: "Pass type",
+        options: [
+          { value: "ga", label: "General admission", hint: "Free" },
+          { value: "vip", label: "VIP lounge", hint: "Invite only" },
+          { value: "speaker", label: "Speaker badge", hint: "Verified" },
+        ],
+      },
     ],
-  }),
-  claim({
-    label: "rsvp",
-    name: "Event RSVP",
-    tagline: "RSVP once, save your spot",
-    description: "RSVP to an event — one spot per verified human, no double-booking.",
-    category: "Events",
-    outcome: "You will RSVP once and save your spot.",
-    perms: ["Check you are a unique human", "Record your RSVP"],
-    worldId: true,
-    policy: "one-rsvp-per-human",
-    submit: "RSVP",
-    creator: "meetups.creator.eth",
-    stats: { rating: 4.7, runs: 640, reviews: 121 },
-    steps: [
-      ["Verify you are human", "One spot per person"],
-      ["Save your RSVP", "We'll hold your place"],
+  ),
+  claim(
+    {
+      label: "rsvp",
+      name: "Event RSVP",
+      tagline: "RSVP once, save your spot",
+      description: "RSVP to an event — one spot per verified human, no double-booking.",
+      category: "Events",
+      outcome: "You will RSVP once and save your spot.",
+      perms: ["Check you are a unique human", "Record your RSVP"],
+      worldId: true,
+      policy: "one-rsvp-per-human",
+      submit: "RSVP",
+      creator: "meetups.creator.eth",
+      stats: { rating: 4.7, runs: 640, reviews: 121 },
+      steps: [
+        ["Verify you are human", "One spot per person"],
+        ["Save your RSVP", "We'll hold your place"],
+      ],
+    },
+    [
+      {
+        type: "infoCard",
+        title: "World Mini-Apps Meetup",
+        lines: ["Thu Jun 19 · 7 PM · SoHo", "48 / 60 spots filled"],
+      },
+      {
+        type: "choiceGroup",
+        key: "meal",
+        label: "Dietary preference",
+        options: [
+          { value: "none", label: "No preference" },
+          { value: "veg", label: "Vegetarian" },
+          { value: "vegan", label: "Vegan" },
+          { value: "gf", label: "Gluten-free" },
+        ],
+        default: "none",
+      },
+      { type: "stepper", key: "guests", label: "Plus-ones", min: 0, max: 2, default: 0, unit: "guests" },
     ],
-  }),
+  ),
 
   // ── Tools ──────────────────────────────────────────────────────────────
   pay(
@@ -492,7 +685,7 @@ export const SEED_APPS: DappManifest[] = [
       label: "parking",
       name: "Parking Meter",
       tagline: "Pay by the hour",
-      description: "Pay for parking by the hour — scan the bay code and pay from your World wallet.",
+      description: "Pay for parking by the hour — pick your zone and duration, pay from your World wallet.",
       category: "Tools",
       outcome: "You will pay for your parking session.",
       perms: ["Read your wallet balance", "Send one USDC payment"],
@@ -500,12 +693,35 @@ export const SEED_APPS: DappManifest[] = [
       creator: "cityservices.creator.eth",
       stats: { rating: 4.5, runs: 760, reviews: 102 },
       steps: [
-        ["Confirm bay and duration", "Loaded from the meter code"],
+        ["Confirm zone and duration", "Price updates as you adjust time"],
         ["Pay the meter", "A single payment on World Chain"],
         ["Start your session", "Saved to your activity"],
       ],
     },
-    { amount: "4", recipient: ens("cityparking"), memo: "Bay 27 · 2 hours", locked: false },
+    { amount: "0.50", recipient: ens("cityparking"), locked: true },
+    [
+      {
+        type: "choiceGroup",
+        key: "zone",
+        label: "Parking zone",
+        options: [
+          { value: "101", label: "Zone 101 · Main St", hint: "$2/hr", pricePerHourUsd: 2 },
+          { value: "102", label: "Zone 102 · Market Sq", hint: "$2.50/hr", pricePerHourUsd: 2.5 },
+          { value: "27", label: "Bay 27 · Lot C", hint: "$2/hr", pricePerHourUsd: 2 },
+          { value: "204", label: "Zone 204 · Waterfront", hint: "$3/hr", pricePerHourUsd: 3 },
+        ],
+      },
+      {
+        type: "durationPicker",
+        key: "duration",
+        label: "Parking duration",
+        minMinutes: 15,
+        maxMinutes: 240,
+        stepMinutes: 15,
+        pricePerHourUsd: 2,
+        defaultMinutes: 60,
+      },
+    ],
   ),
   pay(
     {
@@ -520,17 +736,16 @@ export const SEED_APPS: DappManifest[] = [
       creator: "metro.creator.eth",
       stats: { rating: 4.6, runs: 1340, reviews: 205 },
       steps: [
-        ["Choose your top-up", "Any amount up to the cap"],
+        ["Choose your top-up", "Pick an amount below"],
         ["Pay the transit authority", "A single payment on World Chain"],
         ["Add credit to your pass", "Tap to ride"],
       ],
     },
-    { amount: "10", recipient: ens("metro"), locked: false },
+    { amount: "10", recipient: ens("metro"), locked: true },
+    [{ type: "transitPass", balanceUsd: 4.5, presets: [5, 10, 20], label: "MetroCard" }],
   ),
 ];
 
-/** Points-marketplace catalogue: spend accrued points on per-merchant perks
- *  (powers the Rewards tab in the RestaurantApp + the Activity hub). */
 export type PointsReward = { ens: string; label: string; cost: number };
 
 export const POINTS_REWARDS: PointsReward[] = [

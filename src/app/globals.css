@@ -99,12 +99,14 @@
   --shadow-pop: 0 12px 30px rgba(0, 138, 230, 0.4);
 }
 
-html,
-body {
+html {
   height: 100%;
+  overscroll-behavior-y: none;
 }
 
 body {
+  min-height: 100%;
+  overscroll-behavior-y: none;
   background: var(--color-bg);
   color: var(--color-ink);
   font-family: var(--font-sans), system-ui, sans-serif;
@@ -112,7 +114,6 @@ body {
   text-rendering: optimizeLegibility;
   -webkit-tap-highlight-color: transparent;
   padding-top: env(safe-area-inset-top);
-  padding-bottom: env(safe-area-inset-bottom);
 }
 
 .display {

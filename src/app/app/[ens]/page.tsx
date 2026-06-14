@@ -2,12 +2,13 @@
 
 import { Icon } from "@/components/Icon";
 import { ManifestRunner } from "@/components/ManifestRunner";
-import { Button, Card } from "@/components/ui";
+import { Button } from "@/components/ui";
 import type { AppRecord } from "@/lib/catalog";
 import { readShortcuts, toggleShortcut } from "@/lib/homeShortcuts";
+import { sparkTheme } from "@/lib/sparkTheme";
 import type { DappManifest } from "@/lib/types";
 import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 export default function AppRun() {
   const params = useParams<{ ens: string }>();
@@ -18,6 +19,8 @@ export default function AppRun() {
   const [pinBase, setPinBase] = useState<string[]>([]);
   const isPinned = pinned.includes(ens);
   const togglePin = () => setPinned(toggleShortcut(ens, pinBase));
+
+  const theme = useMemo(() => (manifest ? sparkTheme(manifest) : null), [manifest]);
 
   useEffect(() => {
     fetch(`/api/app/${encodeURIComponent(ens)}`)
@@ -43,15 +46,19 @@ export default function AppRun() {
   }, []);
 
   return (
-    <main className="mx-auto flex w-full max-w-md flex-col gap-4 px-5 pb-16 pt-6">
+    <main
+      className="mx-auto flex min-h-dvh w-full max-w-md flex-col gap-4 px-5 pb-16 pt-6"
+      style={theme ? { background: `linear-gradient(180deg, ${theme.soft} 0%, var(--color-bg) 220px)` } : undefined}
+    >
       <header className="flex items-center gap-3">
         <Button href="/catalog" variant="soft">
           ← Back
         </Button>
-        <h1 className="display min-w-0 flex-1 truncate text-2xl font-extrabold">{manifest?.name ?? "Spark"}</h1>
+        <h1 className="display min-w-0 flex-1 truncate text-xl font-extrabold">{manifest?.name ?? "Spark"}</h1>
         <button
           type="button"
           aria-label={isPinned ? "Unpin from Home" : "Pin to Home"}
+          title={isPinned ? "Unpin from Home" : "Pin to Home"}
           onClick={togglePin}
           className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface/90 shadow-soft transition active:scale-90"
         >
@@ -59,11 +66,15 @@ export default function AppRun() {
         </button>
       </header>
 
-      {status === "loading" && <Card><p className="text-sm text-muted">Loading…</p></Card>}
+      {status === "loading" && (
+        <div className="rounded-3xl bg-surface p-6 shadow-soft">
+          <p className="text-sm text-muted">Loading…</p>
+        </div>
+      )}
       {status === "notfound" && (
-        <Card>
+        <div className="rounded-3xl bg-surface p-6 shadow-soft">
           <p className="text-sm text-muted">Spark not found. It may not be published yet.</p>
-        </Card>
+        </div>
       )}
       {status === "ok" && manifest && (
         <>
@@ -72,19 +83,11 @@ export default function AppRun() {
             <img
               src={`/api/blob/${manifest.storage.imageBlobId}`}
               alt={`${manifest.name} cover`}
-              className="h-44 w-full rounded-2xl object-cover"
+              className="h-40 w-full object-cover shadow-card"
+              style={{ borderRadius: theme?.radius ?? "1rem" }}
             />
           )}
-          <Card>
-            <p className="text-xs text-blue-link">{manifest.ensName}</p>
-            <p className="mt-1 text-sm text-muted">{manifest.description}</p>
-            {manifest.storage?.manifestBlobId && (
-              <p className="mt-2 text-[11px] text-faint">manifest on Walrus · {manifest.storage.manifestBlobId.slice(0, 12)}…</p>
-            )}
-          </Card>
-          <Card>
-            <ManifestRunner manifest={manifest} />
-          </Card>
+          <ManifestRunner manifest={manifest} />
         </>
       )}
     </main>

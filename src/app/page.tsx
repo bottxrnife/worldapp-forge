@@ -6,7 +6,7 @@ import { SparkArt } from "@/components/SparkArt";
 import { useAuth } from "@/lib/auth";
 import type { AppRecord } from "@/lib/catalog";
 import { APP } from "@/lib/config";
-import { getShortcuts, saveShortcuts, toggleShortcut } from "@/lib/homeShortcuts";
+import { getShortcuts, saveShortcuts } from "@/lib/homeShortcuts";
 import { getActivity, type ActivityEntry } from "@/lib/store";
 import {
   DndContext,
@@ -284,39 +284,24 @@ export default function Home() {
               <Link href="/catalog" className="text-sm font-semibold text-brand-strong">See all ›</Link>
             </div>
             <div className="-mx-5 mt-3 flex gap-3 overflow-x-auto px-5 pb-1" style={{ scrollbarWidth: "none" }}>
-              {featured.map((a) => {
-                const pinned = order.includes(a.ensName);
-                return (
-                  <Link
-                    key={a.ensName}
-                    href={`/app/${encodeURIComponent(a.ensName)}`}
-                    className="relative w-[230px] shrink-0 rounded-3xl bg-wash p-4"
-                  >
-                    <button
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        setOrder(toggleShortcut(a.ensName, apps.slice(0, 6).map((x) => x.ensName)));
-                      }}
-                      aria-label={pinned ? `Unpin ${a.name} from Home` : `Pin ${a.name} to Home`}
-                      aria-pressed={pinned}
-                      className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-surface/90 shadow-soft backdrop-blur-sm transition active:scale-90"
-                    >
-                      <Icon name="heart" size={18} solid={pinned} className={pinned ? "text-brand" : "text-faint"} />
-                    </button>
-                    <SparkArt ens={a.ensName} category={a.category} size={48} />
-                    <div className="mt-3 flex items-center gap-2">
-                      <p className="text-[15px] font-bold">{a.name}</p>
-                      {a.requiresWorldId && (
-                        <span className="shrink-0 rounded-full bg-success-bg px-2 py-0.5 text-[10px] font-bold text-success">
-                          Human
-                        </span>
-                      )}
-                    </div>
-                    <p className="mt-1 line-clamp-2 text-[13px] text-muted">{a.description}</p>
-                  </Link>
-                );
-              })}
+              {featured.map((a) => (
+                <Link
+                  key={a.ensName}
+                  href={`/app/${encodeURIComponent(a.ensName)}`}
+                  className="w-[230px] shrink-0 rounded-3xl bg-wash p-4"
+                >
+                  <SparkArt ens={a.ensName} category={a.category} size={48} />
+                  <div className="mt-3 flex items-center gap-2">
+                    <p className="text-[15px] font-bold">{a.name}</p>
+                    {a.requiresWorldId && (
+                      <span className="shrink-0 rounded-full bg-success-bg px-2 py-0.5 text-[10px] font-bold text-success">
+                        Human
+                      </span>
+                    )}
+                  </div>
+                  <p className="mt-1 line-clamp-2 text-[13px] text-muted">{a.description}</p>
+                </Link>
+              ))}
             </div>
           </>
         )}

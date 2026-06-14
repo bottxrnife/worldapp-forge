@@ -131,7 +131,13 @@ const MANIFEST_INPUT_SCHEMA = {
         "punchCard {total (stamps for the reward), reward, pointsPerDollar} - loyalty/stamp card; pair with amountInput + recipient so each paid run stamps it; " +
         'menu {currency, items:[{id, name, priceUsd, desc?, tag? (section like "Mains"/"Drinks"), imageBlobId?}], pointsPerDollar?} - ordering; the cart total is the amount, pair with a recipient; ' +
         "submitButton {label} - REQUIRED, include exactly one. " +
-        'Patterns: payment/dues = amountInput + recipient (+ memoInput) + submitButton; loyalty = punchCard + amountInput + recipient + submitButton; ordering = menu + recipient + submitButton; vote/raffle/RSVP/claim = submitButton only with requiresWorldId + spendingCap "$0.00".',
+        "Interactive (use in seeds / rich Sparks): choiceGroup {key, label, options:[{value,label,hint?,pricePerHourUsd?}]}; " +
+        "durationPicker {key, label, minMinutes, maxMinutes, stepMinutes, pricePerHourUsd, defaultMinutes?}; " +
+        "stepper {key, label, min, max, default, unit?}; tipPresets {presets:number[]}; splitBill {totalUsd, defaultPeople?}; " +
+        "progressGoal {goalUsd, raisedUsd?, supporters?}; roundUp {purchaseUsd}; infoCard {title, lines[], badge?}; " +
+        "textArea {key, label, placeholder?, required?}; transitPass {balanceUsd?, presets[]}; membershipCard {tier, benefits[], priceUsd}; " +
+        "savingsRound {roundNumber, payoutTo, contributionUsd, members?}. " +
+        'Patterns: payment/dues = amountInput + recipient (+ memoInput) + submitButton; loyalty = punchCard + amountInput + recipient + submitButton; ordering = menu + recipient + submitButton; vote/raffle/RSVP/claim = submitButton only with requiresWorldId + spendingCap "$0.00" (+ choiceGroup/infoCard for rich UX).',
       items: { type: "object" },
     },
     permissions: {
@@ -268,7 +274,7 @@ Be proactive about choosing the right drafting tool:
 
 To edit or iterate (the user may say "make it cheaper", "add loyalty", "require World ID", "turn it into a menu", "rename it", "give me 3 variations", etc.): call get_current_draft first, then re-call draft_dapp_manifest with the FULL updated manifest - every field, not just the change (or draft_variations if they explicitly want options).
 
-Component patterns to assemble: amountInput + recipient (+ memoInput) + submitButton for payments; add a punchCard for loyalty; a menu (+ recipient) for ordering; submitButton alone with requiresWorldId + spendingCap "$0.00" for vote/raffle/RSVP/claim. Set requiresWorldId + a worldPolicy (one-payment-per-human, one-card-per-human, one-vote-per-human, one-entry-per-human, one-claim-per-human, one-membership-per-human) whenever it should be one-per-human.
+Component patterns to assemble: amountInput + recipient (+ memoInput) + submitButton for payments; add a punchCard for loyalty; a menu (+ recipient) for ordering; submitButton alone with requiresWorldId + spendingCap "$0.00" for vote/raffle/RSVP/claim. Enrich with choiceGroup, durationPicker, stepper, tipPresets, splitBill, progressGoal, roundUp, infoCard, textArea, transitPass, membershipCard, or savingsRound when the Spark needs real inputs (parking zones, ballot options, trip briefs, etc.). Set requiresWorldId + a worldPolicy (one-payment-per-human, one-card-per-human, one-vote-per-human, one-entry-per-human, one-claim-per-human, one-membership-per-human) whenever it should be one-per-human.
 
 Hard rules:
 - Payments settle in the user's World wallet on World Chain; never mention bridges or other chains.

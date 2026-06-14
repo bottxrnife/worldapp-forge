@@ -3,6 +3,8 @@
 import { Icon as Glyph } from "@/components/Icon";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 
 /** Space the floating bar occupies — use as bottom padding so content clears it. */
 export const NAV_CLEARANCE = 104;
@@ -38,6 +40,9 @@ export function FloatingNav() {
   const pathname = usePathname();
   const router = useRouter();
   const createActive = pathname.startsWith("/create");
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => setMounted(true), []);
 
   const Tab = ({ href, label, d, on }: { href: string; label: string; d: string; on: boolean }) => (
     <Link href={href} className={`flex w-[56px] flex-col items-center gap-1 transition-colors ${on ? "text-brand" : "text-faint"}`}>
@@ -46,12 +51,15 @@ export function FloatingNav() {
     </Link>
   );
 
-  return (
+  const bar = (
     <div
-      className="pointer-events-none fixed inset-x-0 bottom-0 z-50 mx-auto max-w-md"
-      style={{ transform: "translateZ(0)", WebkitBackfaceVisibility: "hidden", willChange: "transform" }}
+      className="pointer-events-none fixed inset-x-0 bottom-0 z-[9999] mx-auto max-w-md"
+      style={{ position: "fixed" }}
     >
-      <div className="bg-gradient-to-t from-bg via-bg to-transparent px-5 pb-[max(env(safe-area-inset-bottom),12px)] pt-7">
+      <div
+        className="pointer-events-none bg-gradient-to-t from-bg via-bg/95 to-transparent px-5 pt-7"
+        style={{ paddingBottom: "max(env(safe-area-inset-bottom), 12px)" }}
+      >
         <div className="pointer-events-auto flex items-center justify-between rounded-full bg-surface px-4 py-2.5 shadow-[0_8px_30px_rgba(11,16,32,0.14)]">
           {SIDE.map((t) => (
             <Tab key={t.href} href={t.href} label={t.label} d={t.d} on={t.match(pathname)} />
@@ -83,4 +91,7 @@ export function FloatingNav() {
       </div>
     </div>
   );
+
+  if (!mounted) return null;
+  return createPortal(bar, document.body);
 }

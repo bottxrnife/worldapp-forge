@@ -27,7 +27,14 @@ export type OrderRecord = {
   ts: number;
 };
 
-const K = { loyalty: "forge.loyalty", activity: "forge.activity", orders: "forge.orders" };
+const K = {
+  loyalty: "forge.loyalty",
+  activity: "forge.activity",
+  orders: "forge.orders",
+  transit: "forge.transit",
+  fundraise: "forge.fundraise",
+  parking: "forge.parking",
+};
 
 function read<T>(key: string, fallback: T): T {
   if (typeof window === "undefined") return fallback;
@@ -109,6 +116,38 @@ export function addOrder(o: Omit<OrderRecord, "id" | "ts">): OrderRecord {
   all.unshift(rec);
   write(K.orders, all.slice(0, 100));
   return rec;
+}
+
+export function getTransitBalance(ens: string): number {
+  return read(K.transit, {} as Record<string, number>)[ens] ?? 0;
+}
+export function addTransitBalance(ens: string, amount: number): number {
+  const all = read(K.transit, {} as Record<string, number>);
+  const next = (all[ens] ?? 0) + Math.max(0, amount);
+  all[ens] = Math.round(next * 100) / 100;
+  write(K.transit, all);
+  return all[ens];
+}
+
+export function getFundraiserRaised(ens: string): number {
+  return read(K.fundraise, {} as Record<string, number>)[ens] ?? 0;
+}
+export function addFundraiserRaised(ens: string, amount: number): number {
+  const all = read(K.fundraise, {} as Record<string, number>);
+  const next = (all[ens] ?? 0) + Math.max(0, amount);
+  all[ens] = Math.round(next * 100) / 100;
+  write(K.fundraise, all);
+  return all[ens];
+}
+
+export type ParkingSession = { zone: string; minutes: number; expiresAt: number };
+export function getParkingSession(ens: string): ParkingSession | null {
+  return read(K.parking, {} as Record<string, ParkingSession>)[ens] ?? null;
+}
+export function setParkingSession(ens: string, session: ParkingSession): void {
+  const all = read(K.parking, {} as Record<string, ParkingSession>);
+  all[ens] = session;
+  write(K.parking, all);
 }
 
 function cryptoId(prefix: string): string {

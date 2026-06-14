@@ -4,7 +4,6 @@ import { FloatingNav } from "@/components/FloatingNav";
 import { Icon } from "@/components/Icon";
 import { SparkArt } from "@/components/SparkArt";
 import type { AppRecord } from "@/lib/catalog";
-import { readShortcuts, toggleShortcut } from "@/lib/homeShortcuts";
 import Link from "next/link";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 
@@ -29,18 +28,7 @@ function SparkCover({ a, className, artSize }: { a: AppRecord; className: string
   );
 }
 
-function SparkCard({
-  a,
-  featured = false,
-  pinned,
-  onTogglePin,
-}: {
-  a: AppRecord;
-  featured?: boolean;
-  pinned: string[];
-  onTogglePin: (ens: string) => void;
-}) {
-  const isPinned = pinned.includes(a.ensName);
+function SparkCard({ a, featured = false }: { a: AppRecord; featured?: boolean }) {
   return (
     <Link
       href={`/app/${encodeURIComponent(a.ensName)}`}
@@ -59,18 +47,6 @@ function SparkCard({
             Human
           </span>
         )}
-        <button
-          type="button"
-          aria-label={isPinned ? "Unpin from Home" : "Pin to Home"}
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            onTogglePin(a.ensName);
-          }}
-          className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full bg-surface/90 shadow-soft backdrop-blur-sm transition active:scale-90"
-        >
-          <Icon name="heart" size={15} solid={isPinned} className={isPinned ? "text-brand" : "text-faint"} />
-        </button>
       </div>
       <p className={`mt-3 truncate font-bold ${featured ? "text-[16px]" : "text-[14px]"}`}>{a.name}</p>
       <p className={`mt-1 line-clamp-2 text-muted ${featured ? "text-[13px]" : "text-[12px] leading-snug"}`}>
@@ -100,7 +76,6 @@ export default function CatalogPage() {
   const [apps, setApps] = useState<AppRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [chip, setChip] = useState<Chip>("All");
-  const [pinned, setPinned] = useState<string[]>([]);
 
   useEffect(() => {
     fetch("/api/catalog")
@@ -108,13 +83,9 @@ export default function CatalogPage() {
       .then((d) => {
         const list: AppRecord[] = d.apps ?? [];
         setApps(list);
-        setPinned(readShortcuts(list.slice(0, 6).map((a) => a.ensName)));
       })
       .finally(() => setLoading(false));
   }, []);
-
-  const pinBase = useMemo(() => apps.slice(0, 6).map((a) => a.ensName), [apps]);
-  const togglePin = (ens: string) => setPinned(toggleShortcut(ens, pinBase));
 
   const featured = useMemo(() => {
     const f = apps.filter((a) => a.featured);
@@ -163,7 +134,7 @@ export default function CatalogPage() {
                 <h3 className="display text-2xl font-extrabold">Featured</h3>
                 <Rail>
                   {featured.map((a) => (
-                    <SparkCard key={a.ensName} a={a} featured pinned={pinned} onTogglePin={togglePin} />
+                    <SparkCard key={a.ensName} a={a} featured />
                   ))}
                 </Rail>
               </section>
@@ -197,7 +168,7 @@ export default function CatalogPage() {
                 </div>
                 <Rail>
                   {s.items.map((a) => (
-                    <SparkCard key={a.ensName} a={a} pinned={pinned} onTogglePin={togglePin} />
+                    <SparkCard key={a.ensName} a={a} />
                   ))}
                 </Rail>
               </section>
