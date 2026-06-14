@@ -1,17 +1,15 @@
 "use client";
 
-import { appEmoji } from "@/lib/appStyle";
+import { Icon } from "@/components/Icon";
 import type { LoyaltyRecord } from "@/lib/store";
 
 /**
  * Loyalty punch card — the full pass for a `punchCard` Spark. Drawn on a dark
- * panel so it reads as a physical card; the stamp glyph is the Spark's own emoji
+ * panel so it reads as a physical card; filled stamps show a check mark
  * and the progress line tells the user how close they are to the reward.
  */
 export function PunchCard({
   brand,
-  ens,
-  category,
   total,
   reward,
   record,
@@ -26,7 +24,6 @@ export function PunchCard({
   const punches = Math.min(record.punches, total);
   const full = punches >= total;
   const remaining = total - punches;
-  const emoji = appEmoji(ens, category);
 
   return (
     <div className="rounded-[22px] bg-ink-panel p-[18px] text-white">
@@ -37,8 +34,8 @@ export function PunchCard({
             {punches} of {total} stamps
           </p>
         </div>
-        <span className="shrink-0 rounded-full bg-white/10 px-3 py-1.5 text-[12px] font-bold">
-          ★ {record.points.toLocaleString()} pts
+        <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-white/10 px-3 py-1.5 text-[12px] font-bold">
+          <Icon name="star" solid size={11} className="text-white" /> {record.points.toLocaleString()} pts
         </span>
       </div>
 
@@ -57,7 +54,7 @@ export function PunchCard({
                     : "border-[1.5px] border-white/20 text-white/35"
               } ${isNext ? "animate-pulse" : ""}`}
             >
-              {filled ? emoji : i + 1}
+              {filled ? <Icon name="check" size={16} className="text-white" /> : i + 1}
             </div>
           );
         })}
@@ -67,7 +64,7 @@ export function PunchCard({
       <div className="mt-3 flex items-center justify-between gap-3">
         <p className="min-w-0 flex-1 text-[12.5px] leading-snug text-white/60">
           {full
-            ? `Card full — your free ${reward} is ready 🎉`
+            ? `Card full — your free ${reward} is ready`
             : `${remaining} more ${remaining === 1 ? "visit" : "visits"} until a free ${reward}`}
         </p>
         {record.redeemed > 0 && (

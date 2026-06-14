@@ -1,39 +1,35 @@
 @import "tailwindcss";
 
 /*
- * Forge design tokens — Shakepay-inspired makeover.
- * Electric-blue accent (#00A2FF, "Shakepay Blue"), bold display type, playful
- * rounded geometry, soft shadows. Spacing follows the World mini-app design
- * guidelines (24px page padding, 16px in-section, 32px between sections).
+ * Forge design tokens — Shakepay-inspired, electric-blue accent (#00A2FF).
+ * Colors are declared in a NON-inline @theme so every utility resolves to
+ * var(--color-…) and we can repaint for dark mode by overriding the vars under
+ * :root[data-theme="dark"]. Fonts use @theme inline (they reference next/font
+ * vars). Spacing follows the World mini-app guidelines (24/16/32).
  */
-@theme inline {
-  /* base surfaces + text */
+@theme {
   --color-bg: #ffffff;
   --color-surface: #ffffff;
   --color-wash: #eef1f7;
   --color-ink: #0b1020;
   --color-muted: #5b6576;
   --color-faint: #97a0b1;
-  --color-ink-panel: #0e1322; /* rich near-black for dark "card" panels */
+  --color-ink-panel: #0e1322;
 
-  /* Shakepay electric-blue accent family */
   --color-brand: #00a2ff;
   --color-brand-strong: #0089e6;
   --color-brand-soft: #e6f5ff;
   --color-brand-ink: #00466f;
 
-  /* legacy blue-* names mapped onto the brand so existing classes go electric */
   --color-blue-soft: #e6f5ff;
   --color-blue-soft-deep: #cdebff;
   --color-blue-ink: #00375e;
   --color-blue-body: #0b4e78;
   --color-blue-link: #0089e6;
 
-  /* primary action: bold near-black (accessible), electric is the accent */
   --color-cta: #0b1020;
   --color-cta-text: #ffffff;
 
-  /* status */
   --color-success: #0a8a4a;
   --color-success-bg: #d8f5e4;
   --color-warn: #8a6a12;
@@ -42,12 +38,56 @@
   --color-divider: #e6e8ee;
   --color-divider-soft: #f1f3f8;
 
-  --font-sans: var(--font-geist-sans);
-  --font-display: var(--font-bricolage);
-
   --shadow-soft: 0 6px 20px rgba(11, 16, 32, 0.06);
   --shadow-card: 0 8px 30px rgba(11, 16, 32, 0.1);
   --shadow-pop: 0 12px 30px rgba(0, 138, 230, 0.32);
+}
+
+@theme inline {
+  --font-sans: var(--font-geist-sans);
+  --font-display: var(--font-bricolage);
+}
+
+:root {
+  color-scheme: light;
+}
+
+/* Dark palette — repaints every token-based utility. */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --color-bg: #0b0e15;
+  --color-surface: #141a26;
+  --color-wash: #1a2130;
+  --color-ink: #f2f5fa;
+  --color-muted: #9aa6ba;
+  --color-faint: #67738a;
+  --color-ink-panel: #1a2233;
+
+  --color-brand: #2bb4ff;
+  --color-brand-strong: #5cc6ff;
+  --color-brand-soft: #0f2740;
+  --color-brand-ink: #bfe4ff;
+
+  --color-blue-soft: #0f2740;
+  --color-blue-soft-deep: #143653;
+  --color-blue-ink: #bfe4ff;
+  --color-blue-body: #cfe8ff;
+  --color-blue-link: #5cc6ff;
+
+  --color-cta: #f2f5fa;
+  --color-cta-text: #0b0e15;
+
+  --color-success: #46d08a;
+  --color-success-bg: #11321f;
+  --color-warn: #e0b65a;
+  --color-warn-bg: #332813;
+
+  --color-divider: #283143;
+  --color-divider-soft: #1f283a;
+
+  --shadow-soft: 0 6px 20px rgba(0, 0, 0, 0.4);
+  --shadow-card: 0 8px 30px rgba(0, 0, 0, 0.5);
+  --shadow-pop: 0 12px 30px rgba(0, 138, 230, 0.4);
 }
 
 html,
@@ -62,12 +102,10 @@ body {
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   -webkit-tap-highlight-color: transparent;
-  /* respect World App webview safe areas */
   padding-top: env(safe-area-inset-top);
   padding-bottom: env(safe-area-inset-bottom);
 }
 
-/* Bold display headings carry the "Shakepay" typographic signature. */
 .display {
   font-family: var(--font-display), var(--font-sans), system-ui, sans-serif;
   letter-spacing: -0.02em;

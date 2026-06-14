@@ -531,16 +531,16 @@ export const SEED_APPS: DappManifest[] = [
 
 /** Points-marketplace catalogue: spend accrued points on per-merchant perks
  *  (powers the Rewards tab in the RestaurantApp + the Activity hub). */
-export type PointsReward = { ens: string; label: string; cost: number; emoji: string };
+export type PointsReward = { ens: string; label: string; cost: number };
 
 export const POINTS_REWARDS: PointsReward[] = [
-  { ens: ens("bistro"), label: "Free truffle fries", cost: 1000, emoji: "🍟" },
-  { ens: ens("bistro"), label: "Free cold brew", cost: 900, emoji: "☕️" },
-  { ens: ens("bistro"), label: "Free salted caramel shake", cost: 1400, emoji: "🥤" },
-  { ens: ens("bistro"), label: "Free Signature Smash Burger", cost: 3500, emoji: "🍔" },
-  { ens: ens("burgerblock"), label: "$2 off your order", cost: 800, emoji: "🏷️" },
-  { ens: ens("burgerblock"), label: "Free fries", cost: 1200, emoji: "🍟" },
-  { ens: ens("burgerblock"), label: "Free milkshake", cost: 2000, emoji: "🥤" },
-  { ens: ens("beancounter"), label: "Free latte", cost: 800, emoji: "☕️" },
-  { ens: ens("beancounter"), label: "Free pastry", cost: 1100, emoji: "🥐" },
+  { ens: ens("bistro"), label: "Free truffle fries", cost: 1000 },
+  { ens: ens("bistro"), label: "Free cold brew", cost: 900 },
+  { ens: ens("bistro"), label: "Free salted caramel shake", cost: 1400 },
+  { ens: ens("bistro"), label: "Free Signature Smash Burger", cost: 3500 },
+  { ens: ens("burgerblock"), label: "$2 off your order", cost: 800 },
+  { ens: ens("burgerblock"), label: "Free fries", cost: 1200 },
+  { ens: ens("burgerblock"), label: "Free milkshake", cost: 2000 },
+  { ens: ens("beancounter"), label: "Free latte", cost: 800 },
+  { ens: ens("beancounter"), label: "Free pastry", cost: 1100 },
 ];

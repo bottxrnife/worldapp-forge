@@ -1,5 +1,6 @@
 "use client";
 
+import { Icon } from "@/components/Icon";
 import { Button, Card, Pill } from "@/components/ui";
 import type { DappManifest, ManifestComponent } from "@/lib/types";
 import { useEffect, useState, type ChangeEvent } from "react";
@@ -186,7 +187,9 @@ export default function PublishPage() {
                     className="h-12 w-12 shrink-0 rounded-xl object-cover"
                   />
                 ) : (
-                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-surface text-xl">🍽️</div>
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-surface text-faint">
+                    <Icon name="food" size={20} />
+                  </div>
                 )}
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-bold">{it.name}</p>

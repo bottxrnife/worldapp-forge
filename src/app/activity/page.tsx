@@ -1,6 +1,7 @@
 "use client";
 
 import { FloatingNav } from "@/components/FloatingNav";
+import { Icon } from "@/components/Icon";
 import { SparkArt } from "@/components/SparkArt";
 import { getActivity, getLoyalty, type ActivityEntry, type LoyaltyRecord } from "@/lib/store";
 import Link from "next/link";
@@ -51,7 +52,7 @@ export default function ActivityPage() {
         <div className="mt-5 rounded-[28px] bg-ink-panel p-6 text-white shadow-card">
           <div className="flex items-center justify-between">
             <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-white/55">Total points</p>
-            <span className="rounded-full bg-brand/15 px-3 py-1 text-[11px] font-bold text-brand">★ Rewards</span>
+            <span className="inline-flex items-center gap-1 rounded-full bg-brand/15 px-3 py-1 text-[11px] font-bold text-brand"><Icon name="star" solid size={11} /> Rewards</span>
           </div>
           <p className="display mt-2 text-[56px] font-extrabold leading-none">
             {totalPoints.toLocaleString()}
@@ -65,7 +66,10 @@ export default function ActivityPage() {
         <h3 className="display mt-8 text-2xl font-extrabold">Activity</h3>
         {activity.length === 0 ? (
           <div className="mt-3 rounded-3xl bg-wash p-6 text-center">
-            <p className="text-sm text-muted">Run a Spark and your receipts show up here.</p>
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-surface shadow-soft">
+              <Icon name="receipt" size={26} className="text-faint" />
+            </div>
+            <p className="mt-3 text-sm text-muted">Run a Spark and your receipts show up here.</p>
             <Link
               href="/catalog"
               className="mt-4 inline-flex rounded-full bg-cta px-5 py-2.5 text-sm font-bold text-cta-text"

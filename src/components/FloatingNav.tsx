@@ -1,5 +1,6 @@
 "use client";
 
+import { Icon as Glyph } from "@/components/Icon";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 
@@ -68,7 +69,7 @@ export function FloatingNav() {
               }`}
               style={{ background: "linear-gradient(135deg,#00b4ff,#0089e6)" }}
             >
-              <span className="text-2xl">✨</span>
+              <Glyph name="spark" size={24} className="text-white" />
             </span>
             <span className={`mt-1 text-[10.5px] ${createActive ? "font-bold text-brand" : "font-medium text-faint"}`}>
               Create

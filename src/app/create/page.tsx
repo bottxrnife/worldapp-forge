@@ -1,6 +1,7 @@
 "use client";
 
 import { FloatingNav, NAV_CLEARANCE } from "@/components/FloatingNav";
+import { Icon } from "@/components/Icon";
 import { ManifestRunner } from "@/components/ManifestRunner";
 import { SparkArt } from "@/components/SparkArt";
 import { Card, Pill } from "@/components/ui";
@@ -171,8 +172,9 @@ export default function CreatePage() {
         <main className="mx-auto w-full max-w-md px-5 pb-28 pt-6">
           <div className="flex items-center justify-between">
             <h1 className="display text-[30px] font-extrabold">Chats</h1>
-            <button onClick={newChat} className="rounded-full bg-cta px-4 py-2 text-sm font-bold text-cta-text">
-              + New
+            <button onClick={newChat} className="inline-flex items-center gap-1 rounded-full bg-cta px-4 py-2 text-sm font-bold text-cta-text">
+              <Icon name="plus" size={14} />
+              New
             </button>
           </div>
           <p className="mt-1.5 text-[15px] text-muted">Resume a Spark you were building, or start fresh.</p>
@@ -183,7 +185,9 @@ export default function CreatePage() {
                 {c.draft ? (
                   <SparkArt ens={c.draft.ensName} category={c.draft.category} size={44} />
                 ) : (
-                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] bg-blue-soft text-lg">💬</div>
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] bg-blue-soft">
+                    <Icon name="chat" size={20} className="text-brand-strong" />
+                  </div>
                 )}
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-[15px] font-bold">{c.title}</p>
@@ -217,12 +221,14 @@ export default function CreatePage() {
     <>
       <main className="mx-auto w-full max-w-md px-5 pt-6" style={{ paddingBottom: NAV_CLEARANCE + 84 }}>
         <div className="flex items-center gap-2">
-          <button onClick={backToList} className="rounded-full bg-wash px-3 py-2 text-sm font-bold text-blue-link">
-            ‹ Chats
+          <button onClick={backToList} className="inline-flex items-center gap-1 rounded-full bg-wash px-3 py-2 text-sm font-bold text-blue-link">
+            <Icon name="chevron-left" size={16} />
+            Chats
           </button>
           <h1 className="min-w-0 flex-1 truncate text-lg font-extrabold">{active?.title ?? "New chat"}</h1>
-          <button onClick={newChat} className="rounded-full bg-wash px-3 py-2 text-sm font-bold text-blue-link">
-            + New
+          <button onClick={newChat} className="inline-flex items-center gap-1 rounded-full bg-wash px-3 py-2 text-sm font-bold text-blue-link">
+            <Icon name="plus" size={14} />
+            New
           </button>
         </div>
 
@@ -346,8 +352,8 @@ export default function CreatePage() {
             placeholder="Describe your Spark…"
             className="max-h-[120px] flex-1 resize-none bg-transparent px-4 py-2.5 text-sm leading-relaxed outline-none"
           />
-          <button onClick={() => send(input)} disabled={busy} className="h-10 w-10 shrink-0 rounded-full bg-cta text-lg text-cta-text disabled:opacity-50">
-            ↑
+          <button onClick={() => send(input)} disabled={busy} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-cta text-cta-text disabled:opacity-50">
+            <Icon name="arrow-up" size={18} className="text-cta-text" />
           </button>
         </div>
       </div>

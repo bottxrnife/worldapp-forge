@@ -1,5 +1,6 @@
 "use client";
 
+import { Icon } from "@/components/Icon";
 import { useAuth } from "@/lib/auth";
 import { payWorld } from "@/lib/pay";
 import { POINTS_REWARDS } from "@/lib/seeds";
@@ -21,23 +22,14 @@ type MenuItem = { id: string; name: string; priceUsd: number; desc?: string; tag
 const short = (a?: string) =>
   a && a.startsWith("0x") ? `${a.slice(0, 6)}…${a.slice(-4)}` : a || "guest";
 
-/** Fallback glyph for a menu item with no photo (by name, then by tag). */
-function itemEmoji(it: MenuItem): string {
-  const n = it.name.toLowerCase();
-  const map: [string, string][] = [
-    ["burger", "🍔"], ["chicken", "🍗"], ["wrap", "🌯"], ["salad", "🥗"], ["fries", "🍟"],
-    ["ring", "🧅"], ["shake", "🥤"], ["lemonade", "🍋"], ["coffee", "☕"], ["brew", "☕"],
-    ["latte", "☕"], ["tea", "🍵"], ["pizza", "🍕"], ["taco", "🌮"], ["pastry", "🥐"], ["cake", "🍰"],
-  ];
-  for (const [k, e] of map) if (n.includes(k)) return e;
-  const tag = (it.tag ?? "").toLowerCase();
-  if (tag.includes("drink")) return "🥤";
-  if (tag.includes("side")) return "🍟";
-  if (tag.includes("main")) return "🍔";
-  return "🍽️";
+/** Fallback line-icon name for a menu item with no photo (by name keyword). */
+function itemIcon(name: string): string {
+  const n = name.toLowerCase();
+  if (/coffee|tea/.test(n)) return "coffee";
+  return "food";
 }
 
-/** A menu item's thumbnail: its Walrus photo if set, else an emoji tile. */
+/** A menu item's thumbnail: its Walrus photo if set, else a monochrome icon tile. */
 function ItemThumb({ it }: { it: MenuItem }) {
   if (it.imageBlobId) {
     return (
@@ -45,7 +37,11 @@ function ItemThumb({ it }: { it: MenuItem }) {
       <img src={`/api/blob/${it.imageBlobId}`} alt={it.name} className="h-12 w-12 shrink-0 rounded-xl object-cover" />
     );
   }
-  return <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-blue-soft text-[22px]">{itemEmoji(it)}</div>;
+  return (
+    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-brand-soft">
+      <Icon name={itemIcon(it.name)} className="text-brand-strong" />
+    </div>
+  );
 }
 
 /**
@@ -145,8 +141,8 @@ export function RestaurantApp({ manifest }: { manifest: DappManifest }) {
           <p className="truncate text-[16px] font-extrabold">{manifest.name}</p>
           <p className="truncate text-[12px] font-semibold text-blue-link">{ens}</p>
         </div>
-        <span className="shrink-0 rounded-full bg-ink-panel px-3.5 py-2 text-[13px] font-bold text-white">
-          <span className="text-brand">★</span> {points.toLocaleString()} pts
+        <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-ink-panel px-3.5 py-2 text-[13px] font-bold text-white">
+          <Icon name="star" solid size={12} className="text-brand" /> {points.toLocaleString()} pts
         </span>
       </div>
 
@@ -238,7 +234,9 @@ export function RestaurantApp({ manifest }: { manifest: DappManifest }) {
             const enough = points >= r.cost;
             return (
               <div key={r.label} className="flex items-center gap-3 rounded-2xl bg-wash px-4 py-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-soft text-[19px]">{r.emoji}</div>
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-soft">
+                  <Icon name="gift" size={18} className="text-brand-strong" />
+                </div>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-[14px] font-bold">{r.label}</p>
                   <p className={`text-[12.5px] ${enough ? "text-success" : "text-faint"}`}>
@@ -285,7 +283,7 @@ export function RestaurantApp({ manifest }: { manifest: DappManifest }) {
           ))}
           {orders.length === 0 && (
             <div className="rounded-2xl bg-wash p-6 text-center">
-              <p className="text-2xl">🧾</p>
+              <Icon name="receipt" className="mx-auto block text-muted" />
               <p className="mt-2 text-[14px] font-bold">No orders yet</p>
               <p className="mt-1 text-[12.5px] text-muted">Place an order and it shows up here with a pickup code.</p>
             </div>
@@ -300,7 +298,9 @@ export function RestaurantApp({ manifest }: { manifest: DappManifest }) {
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-6"
         >
           <div onClick={(e) => e.stopPropagation()} className="w-full max-w-sm rounded-3xl bg-surface p-6 text-center">
-            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-success-bg text-2xl font-bold text-success">✓</div>
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-success-bg text-success">
+              <Icon name="check" />
+            </div>
             <p className="mt-3 text-[19px] font-extrabold">Order confirmed</p>
             <p className="mt-1 text-[13px] text-muted">Show this pickup code at the counter.</p>
 

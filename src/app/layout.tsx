@@ -24,9 +24,14 @@ export const viewport: Viewport = {
   themeColor: "#ffffff",
 };
 
+const THEME_SCRIPT = `(function(){try{var t=localStorage.getItem('forge.theme')||'system';var d=t==='dark'||(t==='system'&&window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.dataset.theme=d?'dark':'light';}catch(e){}})();`;
+
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" className={`${geist.variable} ${bricolage.variable} h-full`}>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
+      </head>
       <body className="min-h-full">
         <Providers>{children}</Providers>
       </body>

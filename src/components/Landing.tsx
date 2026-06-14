@@ -1,5 +1,6 @@
 "use client";
 
+import { Icon } from "@/components/Icon";
 import { useAuth } from "@/lib/auth";
 import { APP } from "@/lib/config";
 
@@ -13,7 +14,7 @@ export function Landing() {
           className="flex h-16 w-16 items-center justify-center rounded-3xl"
           style={{ background: "linear-gradient(135deg,#00b4ff 0%,#0066ff 100%)" }}
         >
-          <span className="text-3xl">✨</span>
+          <Icon name="spark" size={32} className="text-white" />
         </div>
         <h1 className="display mt-6 text-5xl font-extrabold">{APP.name}</h1>
         <p className="mt-3 max-w-[20rem] text-lg leading-relaxed text-muted">
@@ -23,12 +24,12 @@ export function Landing() {
 
         <ul className="mt-8 flex flex-col gap-3">
           {[
-            ["🧑", "Verified humans only — one per human"],
-            ["✨", "Build a Spark by describing it"],
-            ["🗄️", "Owned by ENS + Walrus, not a database"],
-          ].map(([e, t]) => (
+            ["people", "Verified humans only — one per human"],
+            ["spark", "Build a Spark by describing it"],
+            ["database", "Owned by ENS + Walrus, not a database"],
+          ].map(([icon, t]) => (
             <li key={t} className="flex items-center gap-3 text-[15px]">
-              <span className="text-xl">{e}</span>
+              <Icon name={icon} size={18} className="text-brand-strong" />
               <span className="text-ink/80">{t}</span>
             </li>
           ))}

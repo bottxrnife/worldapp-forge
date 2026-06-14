@@ -1,7 +1,10 @@
 "use client";
 
+import { Icon } from "@/components/Icon";
 import { ManifestRunner } from "@/components/ManifestRunner";
 import { Button, Card } from "@/components/ui";
+import type { AppRecord } from "@/lib/catalog";
+import { readShortcuts, toggleShortcut } from "@/lib/homeShortcuts";
 import type { DappManifest } from "@/lib/types";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -11,6 +14,10 @@ export default function AppRun() {
   const ens = decodeURIComponent(String(params.ens));
   const [manifest, setManifest] = useState<DappManifest | null>(null);
   const [status, setStatus] = useState<"loading" | "ok" | "notfound">("loading");
+  const [pinned, setPinned] = useState<string[]>([]);
+  const [pinBase, setPinBase] = useState<string[]>([]);
+  const isPinned = pinned.includes(ens);
+  const togglePin = () => setPinned(toggleShortcut(ens, pinBase));
 
   useEffect(() => {
     fetch(`/api/app/${encodeURIComponent(ens)}`)
@@ -24,13 +31,32 @@ export default function AppRun() {
       .catch(() => setStatus("notfound"));
   }, [ens]);
 
+  useEffect(() => {
+    fetch("/api/catalog")
+      .then((r) => r.json())
+      .then((d) => {
+        const base = ((d.apps ?? []) as AppRecord[]).slice(0, 6).map((a) => a.ensName);
+        setPinBase(base);
+        setPinned(readShortcuts(base));
+      })
+      .catch(() => setPinned(readShortcuts([])));
+  }, []);
+
   return (
     <main className="mx-auto flex w-full max-w-md flex-col gap-4 px-5 pb-16 pt-6">
       <header className="flex items-center gap-3">
         <Button href="/catalog" variant="soft">
           ← Back
         </Button>
-        <h1 className="display truncate text-2xl font-extrabold">{manifest?.name ?? "Spark"}</h1>
+        <h1 className="display min-w-0 flex-1 truncate text-2xl font-extrabold">{manifest?.name ?? "Spark"}</h1>
+        <button
+          type="button"
+          aria-label={isPinned ? "Unpin from Home" : "Pin to Home"}
+          onClick={togglePin}
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-wash shadow-soft transition active:scale-90"
+        >
+          <Icon name="heart" size={20} solid={isPinned} className={isPinned ? "text-brand" : "text-faint"} />
+        </button>
       </header>
 
       {status === "loading" && <Card><p className="text-sm text-muted">Loading…</p></Card>}

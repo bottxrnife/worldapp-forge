@@ -1,5 +1,6 @@
 "use client";
 
+import { Icon } from "@/components/Icon";
 import { PunchCard } from "@/components/PunchCard";
 import { RestaurantApp } from "@/components/RestaurantApp";
 import { SparkArt } from "@/components/SparkArt";
@@ -161,8 +162,8 @@ export function ManifestRunner({ manifest }: { manifest: DappManifest }) {
 
       {done && (
         <div className="rounded-3xl bg-success-bg p-6 text-center">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-success text-2xl font-extrabold text-white">
-            ✓
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-success text-white">
+            <Icon name="check" />
           </div>
           <p className="display mt-3 text-[22px] font-extrabold text-success">
             {done.redeemed ? "Reward redeemed" : "All done"}

@@ -36,3 +36,16 @@ export function resetShortcuts(): void {
     /* ignore */
   }
 }
+
+/** The effective Home list: the saved order, else the provided default base. */
+export function readShortcuts(fallback: string[] = []): string[] {
+  return getShortcuts() ?? fallback;
+}
+
+/** Pin/unpin a Spark on Home (toggles membership), seeding from `fallback` if
+ *  the user hasn't customized Home yet. Returns the new list. */
+export function toggleShortcut(ens: string, fallback: string[] = []): string[] {
+  const cur = getShortcuts() ?? fallback;
+  const next = cur.includes(ens) ? cur.filter((e) => e !== ens) : [...cur, ens];
+  return saveShortcuts(next);
+}
