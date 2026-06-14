@@ -418,6 +418,9 @@ export function RestaurantApp({
       {manifest.storage?.manifestBlobId && (
         <WalrusProof blobId={manifest.storage.manifestBlobId} label="Walrus manifest" />
       )}
+      {manifest.storage?.imageBlobId && (
+        <WalrusProof blobId={manifest.storage.imageBlobId} label="Cover on Walrus" />
+      )}
     </SparkShell>
   );
 }

@@ -122,11 +122,13 @@ body {
 }
 
 /* Spark panels use pastel backgrounds — never pair global .text-muted with them in dark mode. */
-[data-spark-panel] .text-muted {
+[data-spark-panel] .text-muted,
+[data-spark-shell] .text-muted {
   color: color-mix(in srgb, var(--spark-ink, var(--color-ink)) 68%, transparent);
 }
 
-[data-spark-panel] .text-faint {
+[data-spark-panel] .text-faint,
+[data-spark-shell] .text-faint {
   color: color-mix(in srgb, var(--spark-ink, var(--color-ink)) 52%, transparent);
 }
 

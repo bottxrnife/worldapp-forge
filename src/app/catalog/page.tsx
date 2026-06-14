@@ -107,8 +107,26 @@ export default function CatalogPage() {
   return (
     <>
       <main className="mx-auto w-full max-w-md px-5 pb-28 pt-6">
-        <h1 className="display text-[32px] font-extrabold">Sparks</h1>
-        <p className="mt-2 text-[15px] text-muted">Browse human-built Sparks, made with the agent</p>
+        <div className="sticky top-0 z-20 -mx-5 bg-bg px-5 pb-3 pt-1">
+          <h1 className="display text-[32px] font-extrabold">Sparks</h1>
+          <p className="mt-2 text-[15px] text-muted">Browse human-built Sparks, made with the agent</p>
+
+          {!loading && apps.length > 0 && (
+            <div className="mt-4 flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
+              {CHIPS.map((c) => (
+                <button
+                  key={c}
+                  onClick={() => setChip(c)}
+                  className={`shrink-0 rounded-full px-4 py-2 text-sm font-bold transition ${
+                    chip === c ? "bg-brand text-white" : "bg-wash text-ink"
+                  }`}
+                >
+                  {c}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
 
         {loading && <p className="mt-6 text-sm text-muted">Loading…</p>}
 
@@ -141,23 +159,6 @@ export default function CatalogPage() {
                 </Rail>
               </section>
             )}
-
-            {/* Category chips (sticky to the top while you scroll) */}
-            <div className="sticky top-0 z-20 -mx-5 mt-7 bg-bg px-5 py-3">
-              <div className="flex gap-2 overflow-x-auto" style={{ scrollbarWidth: "none" }}>
-                {CHIPS.map((c) => (
-                  <button
-                    key={c}
-                    onClick={() => setChip(c)}
-                    className={`shrink-0 rounded-full px-4 py-2 text-sm font-bold transition ${
-                      chip === c ? "bg-brand text-white" : "bg-wash text-ink"
-                    }`}
-                  >
-                    {c}
-                  </button>
-                ))}
-              </div>
-            </div>
 
             {/* One horizontal rail per category */}
             {visible.map((s) => (

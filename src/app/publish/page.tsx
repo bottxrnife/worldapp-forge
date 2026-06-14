@@ -1,10 +1,12 @@
 "use client";
 
 import { Icon } from "@/components/Icon";
+import { ImageUploadSlot } from "@/components/ImageUploadSlot";
+import { WalrusProof } from "@/components/WalrusProof";
 import { Button, Card, Pill } from "@/components/ui";
 import { APP } from "@/lib/config";
 import type { DappManifest, ManifestComponent } from "@/lib/types";
-import { useEffect, useState, type ChangeEvent } from "react";
+import { useEffect, useState } from "react";
 
 type EnsProvision = {
   chain: "mainnet" | "sepolia";
@@ -28,9 +30,6 @@ export default function PublishPage() {
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<PublishResult | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [uploading, setUploading] = useState(false);
-  const [itemUploading, setItemUploading] = useState<string | null>(null);
-  const [uploadError, setUploadError] = useState<string | null>(null);
 
   useEffect(() => {
     const raw = sessionStorage.getItem("forge.draft");
@@ -40,6 +39,13 @@ export default function PublishPage() {
       } catch {}
     }
   }, []);
+
+  function persist(next: DappManifest) {
+    setDraft(next);
+    try {
+      sessionStorage.setItem("forge.draft", JSON.stringify(next));
+    } catch {}
+  }
 
   const publish = async () => {
     if (!draft) return;
@@ -58,59 +64,6 @@ export default function PublishPage() {
       setError(String(e));
     } finally {
       setBusy(false);
-    }
-  };
-
-  async function uploadToWalrus(file: File): Promise<string> {
-    const res = await fetch("/api/upload", { method: "POST", body: file });
-    const data = await res.json();
-    if (!res.ok || !data.blobId) throw new Error(data.error ?? "Upload failed");
-    return data.blobId as string;
-  }
-
-  function persist(next: DappManifest) {
-    setDraft(next);
-    try {
-      sessionStorage.setItem("forge.draft", JSON.stringify(next));
-    } catch {}
-  }
-
-  const onPickImage = async (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    e.target.value = ""; // allow re-selecting the same file
-    if (!file || !draft) return;
-    setUploading(true);
-    setUploadError(null);
-    try {
-      const blobId = await uploadToWalrus(file);
-      persist({ ...draft, storage: { ...draft.storage, imageBlobId: blobId } });
-    } catch (err) {
-      setUploadError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  const onPickItemImage = (itemId: string) => async (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    e.target.value = "";
-    if (!file || !draft) return;
-    setItemUploading(itemId);
-    setUploadError(null);
-    try {
-      const blobId = await uploadToWalrus(file);
-      persist({
-        ...draft,
-        components: draft.components.map((c) =>
-          c.type === "menu"
-            ? { ...c, items: c.items.map((it) => (it.id === itemId ? { ...it, imageBlobId: blobId } : it)) }
-            : c,
-        ),
-      });
-    } catch (err) {
-      setUploadError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setItemUploading(null);
     }
   };
 
@@ -164,63 +117,64 @@ export default function PublishPage() {
       {!result && (
         <Card>
           <p className="text-sm font-bold">Add a cover image (optional)</p>
-          <p className="mt-0.5 text-xs text-muted">Stored on Walrus and shown on your Spark.</p>
-          {draft.storage?.imageBlobId ? (
-            <div className="mt-3 flex items-center gap-3">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={`/api/blob/${draft.storage.imageBlobId}`}
-                alt="Cover preview"
-                className="h-16 w-16 rounded-xl object-cover"
-              />
-              <label className="cursor-pointer text-xs font-semibold text-blue-link">
-                {uploading ? "Uploading…" : "Replace image"}
-                <input type="file" accept="image/*" className="hidden" onChange={onPickImage} disabled={uploading} />
-              </label>
+          <p className="mt-0.5 text-xs text-muted">Tap to upload — stored on Walrus and shown on your Spark.</p>
+          <div className="mt-3 flex items-center gap-3">
+            <ImageUploadSlot
+              blobId={draft.storage?.imageBlobId}
+              alt={`${draft.name} cover`}
+              size={64}
+              rounded="rounded-2xl"
+              onUploaded={(blobId) =>
+                persist({ ...draft, storage: { ...draft.storage, imageBlobId: blobId } })
+              }
+            />
+            <p className="text-xs text-muted">PNG or JPG, up to 5 MB</p>
+          </div>
+          {draft.storage?.imageBlobId && (
+            <div className="mt-3">
+              <WalrusProof blobId={draft.storage.imageBlobId} label="Cover on Walrus" />
             </div>
-          ) : (
-            <label className="mt-3 flex cursor-pointer items-center justify-center rounded-2xl bg-wash px-4 py-6 text-sm font-semibold text-blue-link">
-              {uploading ? "Uploading…" : "Choose image"}
-              <input type="file" accept="image/*" className="hidden" onChange={onPickImage} disabled={uploading} />
-            </label>
           )}
-          {uploadError && <p className="mt-2 text-xs font-semibold text-warn">{uploadError}</p>}
         </Card>
       )}
 
       {!result && menuComp && (
         <Card>
           <p className="text-sm font-bold">Menu photos (optional)</p>
-          <p className="mt-0.5 text-xs text-muted">Add a photo to each item — stored on Walrus, shown when ordering.</p>
+          <p className="mt-0.5 text-xs text-muted">Tap each tile to upload — stored on Walrus.</p>
           <div className="mt-3 flex flex-col gap-2">
             {menuComp.items.map((it) => (
               <div key={it.id} className="flex items-center gap-3 rounded-2xl bg-wash px-3 py-2">
-                {it.imageBlobId ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={`/api/blob/${it.imageBlobId}`}
-                    alt={it.name}
-                    className="h-12 w-12 shrink-0 rounded-xl object-cover"
-                  />
-                ) : (
-                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-surface text-faint">
-                    <Icon name="food" size={20} />
-                  </div>
-                )}
+                <ImageUploadSlot
+                  blobId={it.imageBlobId}
+                  alt={it.name}
+                  size={48}
+                  rounded="rounded-xl"
+                  onUploaded={(blobId) =>
+                    persist({
+                      ...draft,
+                      components: draft.components.map((c) =>
+                        c.type === "menu"
+                          ? {
+                              ...c,
+                              items: c.items.map((item) =>
+                                item.id === it.id ? { ...item, imageBlobId: blobId } : item,
+                              ),
+                            }
+                          : c,
+                      ),
+                    })
+                  }
+                >
+                  <Icon name="food" size={20} className="text-brand" />
+                </ImageUploadSlot>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-bold">{it.name}</p>
                   <p className="text-xs text-muted">${it.priceUsd.toFixed(2)}</p>
+                  {it.imageBlobId && (
+                    <WalrusProof blobId={it.imageBlobId} label="Photo" compact />
+                  )}
                 </div>
-                <label className="shrink-0 cursor-pointer text-xs font-semibold text-blue-link">
-                  {itemUploading === it.id ? "Uploading…" : it.imageBlobId ? "Change" : "Add photo"}
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={onPickItemImage(it.id)}
-                    disabled={itemUploading !== null}
-                  />
-                </label>
               </div>
             ))}
           </div>
@@ -234,12 +188,6 @@ export default function PublishPage() {
             <li className="flex justify-between gap-2">
               <span className="text-success/70">ENS name</span>
               <span className="font-semibold text-success">{result.ensName}</span>
-            </li>
-            <li className="flex justify-between gap-2">
-              <span className="text-success/70">Walrus blob</span>
-              <span className="truncate font-semibold text-success">
-                {result.blobId ? `${result.blobId.slice(0, 14)}…` : "unavailable"}
-              </span>
             </li>
             {result.ens && (
               <>
@@ -274,15 +222,10 @@ export default function PublishPage() {
               View ENS tx {hash.slice(0, 10)}…
             </a>
           ))}
-          {result.walrusUrl && (
-            <a
-              href={result.walrusUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="mt-2 block text-center text-xs text-success/80 underline"
-            >
-              View manifest on Walrus
-            </a>
+          {result.blobId && (
+            <div className="mt-3">
+              <WalrusProof blobId={result.blobId} label="Walrus manifest" />
+            </div>
           )}
           {result.storageError && (
             <p className="mt-2 text-center text-xs text-warn">Walrus unavailable — recorded locally.</p>

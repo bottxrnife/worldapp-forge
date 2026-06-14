@@ -189,7 +189,14 @@ export function ManifestRunner({
   };
 
   if (menu) {
-    return <RestaurantApp manifest={manifest} />;
+    return (
+      <RestaurantApp
+        manifest={manifest}
+        compact={compact}
+        editable={editable}
+        onManifestChange={onManifestChange}
+      />
+    );
   }
 
   async function run() {
@@ -693,6 +700,9 @@ export function ManifestRunner({
 
       {manifest.storage?.manifestBlobId && (
         <WalrusProof blobId={manifest.storage.manifestBlobId} label="Walrus manifest" />
+      )}
+      {manifest.storage?.imageBlobId && (
+        <WalrusProof blobId={manifest.storage.imageBlobId} label="Cover on Walrus" />
       )}
     </SparkShell>
   );

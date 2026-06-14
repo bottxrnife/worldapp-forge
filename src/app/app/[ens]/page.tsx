@@ -2,14 +2,13 @@
 
 import { Icon } from "@/components/Icon";
 import { ManifestRunner } from "@/components/ManifestRunner";
-import { WalrusProof } from "@/components/WalrusProof";
 import { Button } from "@/components/ui";
 import { useAuth } from "@/lib/auth";
 import type { AppRecord } from "@/lib/catalog";
+import { isSparkCreator } from "@/lib/creatorMatch";
 import { readShortcuts, toggleShortcut } from "@/lib/homeShortcuts";
 import { sparkTheme } from "@/lib/sparkTheme";
 import type { DappManifest } from "@/lib/types";
-import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
@@ -26,11 +25,7 @@ export default function AppRun() {
   const togglePin = () => setPinned(toggleShortcut(ens, pinBase));
 
   const theme = useMemo(() => (manifest ? sparkTheme(manifest) : null), [manifest]);
-  const isCreator = useMemo(() => {
-    if (!manifest || !user?.username || user.guest) return false;
-    const u = user.username.toLowerCase();
-    return manifest.creator.toLowerCase().includes(u) || manifest.creator.toLowerCase().includes(`@${u}`);
-  }, [manifest, user]);
+  const isCreator = useMemo(() => (manifest ? isSparkCreator(manifest, user) : false), [manifest, user]);
 
   useEffect(() => {
     fetch(`/api/app/${encodeURIComponent(ens)}`)
@@ -101,23 +96,7 @@ export default function AppRun() {
           <p className="text-sm text-muted">Spark not found. It may not be published yet.</p>
         </div>
       )}
-      {status === "ok" && manifest && (
-        <>
-          {manifest.storage?.manifestBlobId && (
-            <WalrusProof blobId={manifest.storage.manifestBlobId} label="Walrus manifest" />
-          )}
-          {manifest.storage?.imageBlobId && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={`/api/blob/${manifest.storage.imageBlobId}`}
-              alt={`${manifest.name} cover`}
-              className="h-40 w-full object-cover shadow-card"
-              style={{ borderRadius: theme?.radius ?? "1rem" }}
-            />
-          )}
-          <ManifestRunner manifest={manifest} />
-        </>
-      )}
+      {status === "ok" && manifest && <ManifestRunner manifest={manifest} />}
     </main>
   );
 }

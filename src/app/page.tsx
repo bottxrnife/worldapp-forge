@@ -6,6 +6,7 @@ import { SparkArt } from "@/components/SparkArt";
 import { useAuth } from "@/lib/auth";
 import type { AppRecord } from "@/lib/catalog";
 import { APP } from "@/lib/config";
+import { useBackHandler } from "@/lib/backStack";
 import { getShortcuts, saveShortcuts } from "@/lib/homeShortcuts";
 import { getActivity, type ActivityEntry } from "@/lib/store";
 import {
@@ -20,7 +21,7 @@ import {
 import { SortableContext, useSortable, arrayMove, rectSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 function ensLabel(ens: string) {
   return ens.split(".")[0];
@@ -151,25 +152,38 @@ export default function Home() {
     persist([...order, ens]);
   }
 
+  useBackHandler(
+    useCallback(() => {
+      if (showAdd) {
+        setShowAdd(false);
+        return true;
+      }
+      return false;
+    }, [showAdd]),
+    showAdd,
+  );
+
   return (
     <>
       <main className="mx-auto w-full max-w-md px-5 pb-28 pt-5">
-        {/* header */}
-        <div className="flex items-center justify-between">
-          <Link
-            href="/profile"
-            className="flex h-9 w-9 items-center justify-center rounded-full"
-            style={{ background: "linear-gradient(135deg,#00b4ff,#0066ff)" }}
-          >
-            <span className="text-sm font-extrabold text-white">{(user?.username ?? "0x")[0]?.toUpperCase()}</span>
-          </Link>
-          <span className="rounded-full bg-success-bg px-3 py-1.5 text-xs font-bold text-success">
-            @{user?.username ?? "human"}
-          </span>
-        </div>
+        {/* pinned header — avatar row + title stay visible while scrolling */}
+        <div className="sticky top-0 z-20 -mx-5 bg-bg px-5 pb-3 pt-5">
+          <div className="flex items-center justify-between">
+            <Link
+              href="/profile"
+              className="flex h-9 w-9 items-center justify-center rounded-full"
+              style={{ background: "linear-gradient(135deg,#00b4ff,#0066ff)" }}
+            >
+              <span className="text-sm font-extrabold text-white">{(user?.username ?? "0x")[0]?.toUpperCase()}</span>
+            </Link>
+            <span className="rounded-full bg-success-bg px-3 py-1.5 text-xs font-bold text-success">
+              @{user?.username ?? "human"}
+            </span>
+          </div>
 
-        <h1 className="display mt-4 text-[38px] font-extrabold leading-none">{APP.name}</h1>
-        <p className="mt-2 text-[15px] text-muted">Build a Spark — an app an agent makes for you</p>
+          <h1 className="display mt-4 text-[38px] font-extrabold leading-none">{APP.name}</h1>
+          <p className="mt-2 text-[15px] text-muted">Build a Spark — an app an agent makes for you</p>
+        </div>
 
         {/* hero — the design agent */}
         <Link
@@ -328,11 +342,11 @@ export default function Home() {
       </main>
       <FloatingNav />
 
-      {/* Add a Spark sheet */}
+      {/* Add a Spark sheet — backdrop fixed; sheet slides independently */}
       {showAdd && (
-        <div className="fixed inset-0 z-50 flex flex-col justify-end">
-          <div className="absolute inset-0 bg-black/40" onClick={() => setShowAdd(false)} />
-          <div className="relative mx-auto max-h-[78vh] w-full max-w-md overflow-y-auto rounded-t-3xl bg-surface px-5 pb-8 pt-3 shadow-pop">
+        <>
+          <div className="fixed inset-0 z-50 bg-black/40" onClick={() => setShowAdd(false)} aria-hidden />
+          <div className="fixed inset-x-0 bottom-0 z-[51] mx-auto max-h-[78vh] w-full max-w-md overflow-y-auto rounded-t-3xl bg-surface px-5 pb-8 pt-3 shadow-pop">
             <div className="mx-auto mb-3 h-1.5 w-10 rounded-full bg-wash" />
             <div className="flex items-center justify-between">
               <h3 className="display text-xl font-extrabold">Add a Spark</h3>
@@ -409,7 +423,7 @@ export default function Home() {
               </>
             )}
           </div>
-        </div>
+        </>
       )}
     </>
   );

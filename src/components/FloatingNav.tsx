@@ -3,7 +3,7 @@
 import { Icon as Glyph } from "@/components/Icon";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 /** Space the floating bar occupies — use as bottom padding so content clears it. */
@@ -32,32 +32,40 @@ const SIDE2 = [
 ];
 
 /**
- * Floating oval tab bar (ported from the original app): a white pill that floats
- * over a soft fade, with Home / Apps / a center Create FAB / Rewards / Profile.
- * Stays visible on every tab — including Create.
+ * Floating oval tab bar — portaled to document.body and pinned to the visual
+ * viewport bottom so iOS rubber-band scroll can't drag it.
  */
 export function FloatingNav() {
   const pathname = usePathname();
   const router = useRouter();
   const createActive = pathname.startsWith("/create");
   const [mounted, setMounted] = useState(false);
-  /** Pin to the visual viewport bottom so iOS rubber-band scroll doesn't drag the bar. */
-  const [viewportOffset, setViewportOffset] = useState(0);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const [navTop, setNavTop] = useState<number | null>(null);
 
   useEffect(() => setMounted(true), []);
 
   useEffect(() => {
-    const vv = window.visualViewport;
-    if (!vv) return;
     const sync = () => {
-      setViewportOffset(Math.max(0, window.innerHeight - vv.height - vv.offsetTop));
+      const vv = window.visualViewport;
+      const h = wrapRef.current?.offsetHeight ?? NAV_CLEARANCE;
+      if (!vv) {
+        setNavTop(null);
+        return;
+      }
+      setNavTop(vv.offsetTop + vv.height - h);
     };
     sync();
-    vv.addEventListener("resize", sync);
-    vv.addEventListener("scroll", sync);
+    const vv = window.visualViewport;
+    vv?.addEventListener("resize", sync);
+    vv?.addEventListener("scroll", sync);
+    window.addEventListener("resize", sync);
+    window.addEventListener("orientationchange", sync);
     return () => {
-      vv.removeEventListener("resize", sync);
-      vv.removeEventListener("scroll", sync);
+      vv?.removeEventListener("resize", sync);
+      vv?.removeEventListener("scroll", sync);
+      window.removeEventListener("resize", sync);
+      window.removeEventListener("orientationchange", sync);
     };
   }, []);
 
@@ -70,10 +78,11 @@ export function FloatingNav() {
 
   const bar = (
     <div
-      className="pointer-events-none fixed inset-x-0 z-[9999] mx-auto max-w-md"
+      ref={wrapRef}
+      className="pointer-events-none fixed inset-x-0 z-[9999] mx-auto max-w-md touch-none"
       style={{
-        position: "fixed",
-        bottom: viewportOffset,
+        top: navTop ?? undefined,
+        bottom: navTop == null ? 0 : undefined,
         left: 0,
         right: 0,
         transform: "translateZ(0)",
@@ -89,19 +98,18 @@ export function FloatingNav() {
             <Tab key={t.href} href={t.href} label={t.label} d={t.d} on={t.match(pathname)} />
           ))}
 
-          {/* center Create FAB — stays inside the pill (no negative margin overlap) */}
           <button
             onClick={() => router.push("/create")}
             className="flex w-[56px] flex-col items-center"
             aria-label="Create"
           >
             <span
-              className={`flex h-[46px] w-[46px] items-center justify-center rounded-full text-white shadow-pop ${
+              className={`flex h-9 w-9 items-center justify-center rounded-full text-white shadow-pop ${
                 createActive ? "ring-2 ring-brand/40" : ""
               }`}
               style={{ background: "linear-gradient(135deg,#00b4ff,#0089e6)" }}
             >
-              <Glyph name="spark" size={24} className="text-white" />
+              <Glyph name="spark" size={20} className="text-white" />
             </span>
             <span className={`mt-1 text-[10.5px] ${createActive ? "font-bold text-brand" : "font-medium text-faint"}`}>
               Create

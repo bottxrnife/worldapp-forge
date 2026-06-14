@@ -3,6 +3,7 @@
 import { MiniKitProvider } from "@worldcoin/minikit-js/minikit-provider";
 import { AuthGate } from "@/components/AuthGate";
 import { AuthProvider } from "@/lib/auth";
+import { BackStackProvider } from "@/lib/backStack";
 import { APP } from "@/lib/config";
 
 /**
@@ -13,7 +14,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <MiniKitProvider props={{ appId: APP.worldAppId }}>
       <AuthProvider>
-        <AuthGate>{children}</AuthGate>
+        <BackStackProvider>
+          <AuthGate>{children}</AuthGate>
+        </BackStackProvider>
       </AuthProvider>
     </MiniKitProvider>
   );

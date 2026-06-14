@@ -7,11 +7,12 @@ import { ManifestRunner } from "@/components/ManifestRunner";
 import { SparkArt } from "@/components/SparkArt";
 import { Card, Pill } from "@/components/ui";
 import { createConversation, deleteConversation, listConversations, saveConversation, type Conversation } from "@/lib/conversations";
+import { useBackHandler } from "@/lib/backStack";
 import type { DappManifest, ManifestComponent } from "@/lib/types";
 import { MiniKit } from "@worldcoin/minikit-js";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 
 const CHIPS = [
   "A $5 team dues collector that pays treasury.eth",
@@ -65,6 +66,14 @@ function lastPreview(c: Conversation): string {
 }
 
 export default function CreatePage() {
+  return (
+    <Suspense fallback={<main className="px-5 pt-10 text-sm text-muted">Loading…</main>}>
+      <CreatePageInner />
+    </Suspense>
+  );
+}
+
+function CreatePageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [convos, setConvos] = useState<Conversation[]>([]);
@@ -152,6 +161,21 @@ export default function CreatePage() {
     if (!active) return;
     persist({ ...active, draft: next });
   }
+
+  useBackHandler(
+    useCallback(() => {
+      if (preview) {
+        setPreview(false);
+        return true;
+      }
+      if (view === "chat" && convos.length > 0) {
+        backToList();
+        return true;
+      }
+      return false;
+    }, [preview, view, convos.length]),
+    preview || (view === "chat" && convos.length > 0),
+  );
 
   const send = async (text: string) => {
     const prompt = text.trim();
@@ -405,13 +429,13 @@ export default function CreatePage() {
           </button>
         </div>
       </div>
-      <FloatingNav />
+      {!preview && <FloatingNav />}
 
       {/* full-screen preview — covers the nav (z-50), closes back to the chat */}
       {preview && active?.draft && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-bg">
-          <div className="mx-auto min-h-full w-full max-w-md">
-            <div className="sticky top-0 z-30 flex items-center gap-3 border-b border-divider-soft bg-bg px-6 py-4">
+        <div className="fixed inset-0 z-[10000] flex flex-col bg-bg">
+          <div className="shrink-0 border-b border-divider-soft bg-bg px-6 py-4">
+            <div className="flex items-center gap-3">
               <button onClick={() => setPreview(false)} aria-label="Close preview" className="shrink-0 text-xl leading-none text-muted active:scale-90">
                 ✕
               </button>
@@ -424,18 +448,18 @@ export default function CreatePage() {
                 Publish →
               </Link>
             </div>
+          </div>
 
-            <div className="px-5 pb-24 pt-4">
-              <p className="mb-3 text-center text-[11px] font-semibold text-muted">
-                Tap + on icons or menu photos to upload to Walrus
-              </p>
-              <ManifestRunner
-                manifest={active.draft}
-                compact
-                editable
-                onManifestChange={(m) => updateDraft(m)}
-              />
-            </div>
+          <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-24 pt-4">
+            <p className="mb-3 text-center text-[11px] font-semibold text-muted">
+              Tap + on icons or menu photos to upload to Walrus
+            </p>
+            <ManifestRunner
+              manifest={active.draft}
+              compact
+              editable
+              onManifestChange={(m) => updateDraft(m)}
+            />
           </div>
         </div>
       )}

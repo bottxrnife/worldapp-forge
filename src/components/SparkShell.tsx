@@ -28,10 +28,48 @@ export function SparkShell({
     "--spark-radius": theme.radius,
   } as CSSProperties;
 
+  const showFullHero = !compact;
+  const showCompactHero = compact && editable && onCoverImage;
+
   return (
-    <div className="flex flex-col gap-4" style={vars}>
-      {!compact && <SparkHero manifest={manifest} theme={theme} editable={editable} onCoverImage={onCoverImage} />}
+    <div className="flex flex-col gap-4" data-spark-shell style={vars}>
+      {showFullHero && (
+        <SparkHero manifest={manifest} theme={theme} editable={editable} onCoverImage={onCoverImage} />
+      )}
+      {showCompactHero && (
+        <CompactEditableHero manifest={manifest} theme={theme} onCoverImage={onCoverImage} />
+      )}
       {children}
+    </div>
+  );
+}
+
+/** Preview/edit strip — cover upload without overlapping the page chrome. */
+function CompactEditableHero({
+  manifest,
+  theme,
+  onCoverImage,
+}: {
+  manifest: DappManifest;
+  theme: SparkTheme;
+  onCoverImage: (blobId: string) => void;
+}) {
+  return (
+    <div
+      className="flex items-center gap-3 p-3 text-white shadow-card"
+      style={{ background: theme.gradient, borderRadius: theme.radius }}
+    >
+      <ImageUploadSlot
+        blobId={manifest.storage?.imageBlobId}
+        alt={`${manifest.name} icon`}
+        size={44}
+        rounded="rounded-xl"
+        onUploaded={onCoverImage}
+      />
+      <div className="min-w-0 flex-1">
+        <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-white/60">{manifest.category}</p>
+        <p className="display truncate text-[17px] font-extrabold">{manifest.name}</p>
+      </div>
     </div>
   );
 }
@@ -73,7 +111,7 @@ function SparkHero({
           METER
         </div>
       )}
-      <div className="relative z-10 p-5">
+      <div className="relative p-5">
         <div className="flex items-start gap-4">
           <div
             className="shrink-0 rounded-2xl p-0.5 shadow-pop"
