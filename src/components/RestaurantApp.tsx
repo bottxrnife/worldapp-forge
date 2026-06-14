@@ -16,10 +16,37 @@ import type { DappManifest, ManifestComponent } from "@/lib/types";
 import { useEffect, useMemo, useState } from "react";
 
 type Tab = "order" | "rewards" | "history";
-type MenuItem = { id: string; name: string; priceUsd: number; desc?: string; tag?: string };
+type MenuItem = { id: string; name: string; priceUsd: number; desc?: string; tag?: string; imageBlobId?: string };
 
 const short = (a?: string) =>
   a && a.startsWith("0x") ? `${a.slice(0, 6)}…${a.slice(-4)}` : a || "guest";
+
+/** Fallback glyph for a menu item with no photo (by name, then by tag). */
+function itemEmoji(it: MenuItem): string {
+  const n = it.name.toLowerCase();
+  const map: [string, string][] = [
+    ["burger", "🍔"], ["chicken", "🍗"], ["wrap", "🌯"], ["salad", "🥗"], ["fries", "🍟"],
+    ["ring", "🧅"], ["shake", "🥤"], ["lemonade", "🍋"], ["coffee", "☕"], ["brew", "☕"],
+    ["latte", "☕"], ["tea", "🍵"], ["pizza", "🍕"], ["taco", "🌮"], ["pastry", "🥐"], ["cake", "🍰"],
+  ];
+  for (const [k, e] of map) if (n.includes(k)) return e;
+  const tag = (it.tag ?? "").toLowerCase();
+  if (tag.includes("drink")) return "🥤";
+  if (tag.includes("side")) return "🍟";
+  if (tag.includes("main")) return "🍔";
+  return "🍽️";
+}
+
+/** A menu item's thumbnail: its Walrus photo if set, else an emoji tile. */
+function ItemThumb({ it }: { it: MenuItem }) {
+  if (it.imageBlobId) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img src={`/api/blob/${it.imageBlobId}`} alt={it.name} className="h-12 w-12 shrink-0 rounded-xl object-cover" />
+    );
+  }
+  return <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-blue-soft text-[22px]">{itemEmoji(it)}</div>;
+}
 
 /**
  * RestaurantApp — the full runtime for any `menu` Spark (e.g. Corner Bistro).
@@ -152,13 +179,16 @@ export function RestaurantApp({ manifest }: { manifest: DappManifest }) {
             <div key={tag} className="flex flex-col gap-2">
               <p className="mt-1 text-[12px] font-bold uppercase tracking-wide text-muted">{tag}</p>
               {group.map((it) => (
-                <div key={it.id} className="flex items-center justify-between gap-3 rounded-2xl bg-wash px-4 py-3">
-                  <div className="min-w-0">
-                    <p className="text-[14px] font-bold">{it.name}</p>
-                    <p className="text-[12px] text-muted">
-                      ${it.priceUsd.toFixed(2)}
-                      {it.desc ? ` · ${it.desc}` : ""}
-                    </p>
+                <div key={it.id} className="flex items-center justify-between gap-3 rounded-2xl bg-wash px-3 py-2.5">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <ItemThumb it={it} />
+                    <div className="min-w-0">
+                      <p className="truncate text-[14px] font-bold">{it.name}</p>
+                      <p className="text-[12px] text-muted">
+                        ${it.priceUsd.toFixed(2)}
+                        {it.desc ? ` · ${it.desc}` : ""}
+                      </p>
+                    </div>
                   </div>
                   {cart[it.id] ? (
                     <div className="flex items-center gap-3">

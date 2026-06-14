@@ -9,7 +9,7 @@ export type ManifestComponent =
   | {
       type: "menu";
       currency: string;
-      items: Array<{ id: string; name: string; priceUsd: number; desc?: string; tag?: string }>;
+      items: Array<{ id: string; name: string; priceUsd: number; desc?: string; tag?: string; imageBlobId?: string }>;
       pointsPerDollar?: number;
     }
   | { type: "submitButton"; label: string };

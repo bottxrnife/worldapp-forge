@@ -1,7 +1,7 @@
 "use client";
 
 import { Button, Card, Pill } from "@/components/ui";
-import type { DappManifest } from "@/lib/types";
+import type { DappManifest, ManifestComponent } from "@/lib/types";
 import { useEffect, useState, type ChangeEvent } from "react";
 
 type PublishResult = { ensName: string; blobId: string | null; walrusUrl: string | null; storageError?: string };
@@ -12,6 +12,7 @@ export default function PublishPage() {
   const [result, setResult] = useState<PublishResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [itemUploading, setItemUploading] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -43,6 +44,20 @@ export default function PublishPage() {
     }
   };
 
+  async function uploadToWalrus(file: File): Promise<string> {
+    const res = await fetch("/api/upload", { method: "POST", body: file });
+    const data = await res.json();
+    if (!res.ok || !data.blobId) throw new Error(data.error ?? "Upload failed");
+    return data.blobId as string;
+  }
+
+  function persist(next: DappManifest) {
+    setDraft(next);
+    try {
+      sessionStorage.setItem("forge.draft", JSON.stringify(next));
+    } catch {}
+  }
+
   const onPickImage = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = ""; // allow re-selecting the same file
@@ -50,19 +65,35 @@ export default function PublishPage() {
     setUploading(true);
     setUploadError(null);
     try {
-      const res = await fetch("/api/upload", { method: "POST", body: file });
-      const data = await res.json();
-      if (!res.ok || !data.blobId) {
-        setUploadError(data.error ?? "Upload failed");
-      } else {
-        const next: DappManifest = { ...draft, storage: { ...draft.storage, imageBlobId: data.blobId } };
-        setDraft(next);
-        sessionStorage.setItem("forge.draft", JSON.stringify(next));
-      }
+      const blobId = await uploadToWalrus(file);
+      persist({ ...draft, storage: { ...draft.storage, imageBlobId: blobId } });
     } catch (err) {
-      setUploadError(String(err));
+      setUploadError(err instanceof Error ? err.message : String(err));
     } finally {
       setUploading(false);
+    }
+  };
+
+  const onPickItemImage = (itemId: string) => async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file || !draft) return;
+    setItemUploading(itemId);
+    setUploadError(null);
+    try {
+      const blobId = await uploadToWalrus(file);
+      persist({
+        ...draft,
+        components: draft.components.map((c) =>
+          c.type === "menu"
+            ? { ...c, items: c.items.map((it) => (it.id === itemId ? { ...it, imageBlobId: blobId } : it)) }
+            : c,
+        ),
+      });
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setItemUploading(null);
     }
   };
 
@@ -78,6 +109,10 @@ export default function PublishPage() {
       </main>
     );
   }
+
+  const menuComp = draft.components.find((c) => c.type === "menu") as
+    | Extract<ManifestComponent, { type: "menu" }>
+    | undefined;
 
   return (
     <main className="mx-auto flex w-full max-w-md flex-col gap-4 px-5 pb-16 pt-6">
@@ -133,6 +168,43 @@ export default function PublishPage() {
             </label>
           )}
           {uploadError && <p className="mt-2 text-xs font-semibold text-warn">{uploadError}</p>}
+        </Card>
+      )}
+
+      {!result && menuComp && (
+        <Card>
+          <p className="text-sm font-bold">Menu photos (optional)</p>
+          <p className="mt-0.5 text-xs text-muted">Add a photo to each item — stored on Walrus, shown when ordering.</p>
+          <div className="mt-3 flex flex-col gap-2">
+            {menuComp.items.map((it) => (
+              <div key={it.id} className="flex items-center gap-3 rounded-2xl bg-wash px-3 py-2">
+                {it.imageBlobId ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={`/api/blob/${it.imageBlobId}`}
+                    alt={it.name}
+                    className="h-12 w-12 shrink-0 rounded-xl object-cover"
+                  />
+                ) : (
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-surface text-xl">🍽️</div>
+                )}
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-bold">{it.name}</p>
+                  <p className="text-xs text-muted">${it.priceUsd.toFixed(2)}</p>
+                </div>
+                <label className="shrink-0 cursor-pointer text-xs font-semibold text-blue-link">
+                  {itemUploading === it.id ? "Uploading…" : it.imageBlobId ? "Change" : "Add photo"}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={onPickItemImage(it.id)}
+                    disabled={itemUploading !== null}
+                  />
+                </label>
+              </div>
+            ))}
+          </div>
         </Card>
       )}
 
