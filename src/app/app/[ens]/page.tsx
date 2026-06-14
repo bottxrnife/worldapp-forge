@@ -12,8 +12,9 @@ import { defaultHomeShortcuts, readShortcuts, toggleShortcut } from "@/lib/homeS
 import { getMySparkManifest } from "@/lib/mySparks";
 import { sparkTheme } from "@/lib/sparkTheme";
 import type { DappManifest } from "@/lib/types";
+import { useVisualViewportTop } from "@/lib/viewport";
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 export default function AppRun() {
   const params = useParams<{ ens: string }>();
@@ -24,11 +25,24 @@ export default function AppRun() {
   const [status, setStatus] = useState<"loading" | "ok" | "notfound">("loading");
   const [pinned, setPinned] = useState<string[]>([]);
   const [pinBase, setPinBase] = useState<string[]>([]);
+  const headerRef = useRef<HTMLElement>(null);
+  const [headerH, setHeaderH] = useState(56);
+  const vvTop = useVisualViewportTop();
   const isPinned = pinned.includes(ens);
   const togglePin = () => setPinned(toggleShortcut(ens, pinBase));
 
   const theme = useMemo(() => (manifest ? sparkTheme(manifest) : null), [manifest]);
   const isCreator = useMemo(() => (manifest ? isSparkCreator(manifest, user) : false), [manifest, user]);
+
+  useLayoutEffect(() => {
+    const el = headerRef.current;
+    if (!el) return;
+    const sync = () => setHeaderH(el.offsetHeight);
+    sync();
+    const ro = new ResizeObserver(sync);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [status, isCreator, manifest?.name]);
 
   useEffect(() => {
     fetch(`/api/app/${encodeURIComponent(ens)}`)
@@ -72,50 +86,61 @@ export default function AppRun() {
   }
 
   return (
-    <main
-      className="mx-auto flex min-h-dvh w-full max-w-md flex-col gap-4 px-5 pb-16 pt-6"
-      style={theme ? { background: `linear-gradient(180deg, ${theme.soft} 0%, var(--color-bg) 220px)` } : undefined}
-    >
-      <header className="flex items-center gap-2">
-        <Button href="/catalog" variant="soft">
-          ← Back
-        </Button>
-        <h1 className="display min-w-0 flex-1 truncate text-xl font-extrabold">{manifest?.name ?? "Spark"}</h1>
-        {isCreator && status === "ok" && (
+    <>
+      <header
+        ref={headerRef}
+        className="fixed inset-x-0 z-30 border-b border-divider-soft bg-bg/95 backdrop-blur-md"
+        style={{ top: `calc(var(--forge-preview-banner-h, 0px) + ${vvTop}px)` }}
+      >
+        <div className="mx-auto flex w-full max-w-md items-center gap-2 px-5 py-3">
+          <Button href="/catalog" variant="soft">
+            ← Back
+          </Button>
+          <h1 className="display min-w-0 flex-1 truncate text-xl font-extrabold">{manifest?.name ?? "Spark"}</h1>
+          {isCreator && status === "ok" && (
+            <button
+              type="button"
+              onClick={startEdit}
+              className="shrink-0 rounded-full bg-wash px-3 py-2 text-xs font-bold text-ink"
+            >
+              Edit
+            </button>
+          )}
+          <SparkQrButton ensName={ens} sparkName={manifest?.name ?? ens} />
+          {status === "ok" && manifest && (
+            <DeleteSparkButton ensName={ens} sparkName={manifest.name} manifest={manifest} user={user} />
+          )}
           <button
             type="button"
-            onClick={startEdit}
-            className="shrink-0 rounded-full bg-wash px-3 py-2 text-xs font-bold text-ink"
+            aria-label={isPinned ? "Unpin from Home" : "Pin to Home"}
+            title={isPinned ? "Unpin from Home" : "Pin to Home"}
+            onClick={togglePin}
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface/90 shadow-soft transition active:scale-90"
           >
-            Edit
+            <Icon name="heart" size={20} solid={isPinned} className={isPinned ? "text-brand" : "text-faint"} />
           </button>
-        )}
-        <SparkQrButton ensName={ens} sparkName={manifest?.name ?? ens} />
-        {status === "ok" && manifest && (
-          <DeleteSparkButton ensName={ens} sparkName={manifest.name} manifest={manifest} user={user} />
-        )}
-        <button
-          type="button"
-          aria-label={isPinned ? "Unpin from Home" : "Pin to Home"}
-          title={isPinned ? "Unpin from Home" : "Pin to Home"}
-          onClick={togglePin}
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface/90 shadow-soft transition active:scale-90"
-        >
-          <Icon name="heart" size={20} solid={isPinned} className={isPinned ? "text-brand" : "text-faint"} />
-        </button>
+        </div>
       </header>
 
-      {status === "loading" && (
-        <div className="rounded-3xl bg-surface p-6 shadow-soft">
-          <p className="text-sm text-muted">Loading…</p>
-        </div>
-      )}
-      {status === "notfound" && (
-        <div className="rounded-3xl bg-surface p-6 shadow-soft">
-          <p className="text-sm text-muted">Spark not found. It may not be published yet.</p>
-        </div>
-      )}
-      {status === "ok" && manifest && <ManifestRunner manifest={manifest} />}
-    </main>
+      <main
+        className="mx-auto flex min-h-dvh w-full max-w-md flex-col gap-4 px-5 pb-16"
+        style={{
+          paddingTop: headerH + 8,
+          ...(theme ? { background: `linear-gradient(180deg, ${theme.soft} 0%, var(--color-bg) 220px)` } : undefined),
+        }}
+      >
+        {status === "loading" && (
+          <div className="rounded-3xl bg-surface p-6 shadow-soft">
+            <p className="text-sm text-muted">Loading…</p>
+          </div>
+        )}
+        {status === "notfound" && (
+          <div className="rounded-3xl bg-surface p-6 shadow-soft">
+            <p className="text-sm text-muted">Spark not found. It may not be published yet.</p>
+          </div>
+        )}
+        {status === "ok" && manifest && <ManifestRunner manifest={manifest} />}
+      </main>
+    </>
   );
 }
