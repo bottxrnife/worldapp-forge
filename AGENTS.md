@@ -82,6 +82,7 @@ src/
     ├── ensPublish.ts        Auto-provision Spark ENS on publish — v2 mint (Sepolia) or classic calldata (mainnet)
     ├── walrus.ts            Walrus HTTP store/read (publisher/aggregator): storeBlob (text), storeBytes (images), readBlob
     ├── catalog.ts           In-memory catalog index (seeds + published) + manifest cache
+    ├── categories.ts        Canonical Spark categories + catalog chips (Featured filter + Finance/Food/Community/Agents/Tools)
     ├── seeds.ts             ~20 built-in sample Sparks (pay/claim/punch/menu builders) + POINTS_REWARDS
     ├── appStyle.ts          per-Spark accent color (appAccent) — the solid background of its SparkArt tile
     ├── icons.ts             ICON_PATHS (24x24 line glyphs) + iconNameFor(ens,category); shared by Icon + SparkArt
@@ -112,7 +113,7 @@ src/
 - **Activity** — total points, your loyalty passes, and the activity/receipts feed (localStorage).
 - **Floating oval nav** — Home / Apps / center **Create FAB** / Activity / Profile, visible on every tab and **truly fixed** (portaled to `document.body` + `overscroll-behavior-y: none` so it doesn't drift on fast scroll).
 
-**Built-in sample Sparks (`seeds.ts`, ~20 across all 5 categories, each with a tagline + rating/runs/reviews):** Team Dues, Split the Bill, Coffee Tip Jar, Burger Block Rewards (punch), Article Unlock, Corner Bistro (menu → RestaurantApp), Bean Counter Café (punch), DAO Vote, Savings Circle, Community Fundraiser, Club Membership Pass, Charity Round-Up, Research Agent Market, Trip Planner Agent, Community Raffle, Ticket Claim, Event RSVP, Parking Meter, Transit Top-Up. The `menu` Spark renders the full tabbed ordering UI; `punchCard` Sparks render the loyalty pass; `POINTS_REWARDS` powers the Rewards tab.
+**Built-in sample Sparks (`seeds.ts`, ~20 across Finance / Food / Community / Agents / Tools, each with a tagline + rating/runs/reviews):** Team Dues, Split the Bill, Coffee Tip Jar, Burger Block Rewards (punch), Article Unlock, Corner Bistro (menu → RestaurantApp), Bean Counter Café (punch), DAO Vote, Savings Circle, Community Fundraiser, Club Membership Pass, Charity Round-Up, Research Agent Market, Trip Planner Agent, Community Raffle, Ticket Claim, Event RSVP, Parking Meter, Transit Top-Up. The `menu` Spark renders the full tabbed ordering UI; `punchCard` Sparks render the loyalty pass; `POINTS_REWARDS` powers the Rewards tab.
 
 ---
 
@@ -191,6 +192,8 @@ In a desktop browser you get the full UI, the agent, Walrus publishing, and the 
 
 | Date | Author | Change |
 |---|---|---|
+| 2026-06-14 | Build agent | **Spark QR share.** Run page header: QR button beside pin-to-Home. Encodes World App universal link (`world.org/mini-app?app_id=…&path=/app/{ens}`) so a scan opens that Spark inside World App; copy-link + bottom sheet. `lib/sparkLinks.ts` + `SparkQrSheet.tsx`. |
+| 2026-06-14 | Build agent | **Spark categories recategorized.** Browse chips/sections: Featured + Finance, Food, Community, Agents, Tools (replaced Events). Food holds Corner Bistro, Bean Counter, Burger Block, Coffee Tip Jar; event Sparks moved to Community. Centralized in `lib/categories.ts`; legacy `Events` maps to Community on read. |
 | 2026-06-14 | bottxrnife | **Rename to worldapp-forge.** GitHub repo → `bottxrnife/worldapp-forge`; Vercel production → `https://worldapp-forge.vercel.app`. New Dev Portal mini app `app_129a788263c412af13fb073f6d467974` + RP `rp_0a19342e5af2dedd` (registered); Vercel env updated. |
 | 2026-06-14 | bottxrnife | **"Your Sparks" rail.** Published Sparks persist in `mySparks.ts` (localStorage + full manifest). Catalog + Home show a **Your Sparks** section above Featured; publish success links there; run page falls back to the local manifest if the server catalog cold-starts. |
 | 2026-06-14 | bottxrnife | **Issue audit #8–#16 (real fixes).** Root cause: `ManifestRunner` returned `<RestaurantApp>` without `compact`/`editable`/`onManifestChange`, so menu Spark previews couldn't upload images (#11/#12). Nav bar now pins via `visualViewport` **top** positioning (#6/#9). Preview overlay uses fixed header + scroll body (#10); OS back handled by `BackStackProvider` (#5). Home/catalog sticky headers (#4); Add sheet backdrop decoupled from sheet (#1). Dark-mode Spark contrast extended to `[data-spark-shell]` (#13). `isSparkCreator()` for Edit (#12). Ticket/unlock icon paths redrawn (#15/#16). |

@@ -2,6 +2,8 @@
  * Built-in sample Sparks. These are the showcase apps that ship with Forge so
  * the catalog, runtime, loyalty, and ordering are populated out of the box.
  */
+import { BISTRO_WALRUS } from "./bistroMedia";
+import type { SparkCategory } from "./categories";
 import { APP } from "./config";
 import type { DappManifest, ManifestComponent } from "./types";
 
@@ -15,8 +17,8 @@ type Base = {
   name: string;
   tagline: string;
   description: string;
-  category: "Finance" | "Community" | "Agents" | "Events" | "Tools";
-  secondary?: Base["category"];
+  category: SparkCategory;
+  secondary?: SparkCategory;
   outcome: string;
   perms: string[];
   cap?: string;
@@ -177,7 +179,8 @@ export const SEED_APPS: DappManifest[] = [
       name: "Coffee Tip Jar",
       tagline: "One-tap tips for your barista",
       description: "Leave a tip that lands straight in the barista's World wallet — pick an amount and tap.",
-      category: "Finance",
+      category: "Food",
+      secondary: "Finance",
       outcome: "You will leave a tip for the barista.",
       perms: ["Read your wallet balance", "Send one USDC tip"],
       submit: "Leave a tip",
@@ -197,8 +200,8 @@ export const SEED_APPS: DappManifest[] = [
       tagline: "Eat, stamp, earn — 10 = free burger",
       description:
         "Scan the counter, pay for your meal, and stamp your loyalty card. Ten stamps earns a free Classic Smash Burger, and every dollar earns points.",
-      category: "Finance",
-      secondary: "Community",
+      category: "Food",
+      secondary: "Finance",
       outcome: "You will pay for your meal and collect one stamp.",
       perms: ["Read your wallet balance", "Send one USDC payment", "Stamp your card and add points"],
       submit: "Pay & stamp",
@@ -259,7 +262,7 @@ export const SEED_APPS: DappManifest[] = [
     ],
   ),
 
-  // ── Community ──────────────────────────────────────────────────────────
+  // ── Food ───────────────────────────────────────────────────────────────
   menuApp(
     {
       label: "bistro",
@@ -267,7 +270,7 @@ export const SEED_APPS: DappManifest[] = [
       tagline: "Order in-app, pay, earn points",
       description:
         "Open the menu, build your order, and pay the total in your World wallet — the kitchen is notified instantly and you earn 100 points per $1 to redeem for rewards.",
-      category: "Community",
+      category: "Food",
       secondary: "Finance",
       outcome: "You will pay your order total and the kitchen starts preparing it.",
       perms: ["Read your wallet balance", "Pay your order total", "Send your order to the kitchen and add points"],
@@ -285,7 +288,7 @@ export const SEED_APPS: DappManifest[] = [
     {
       recipient: ens("bistro"),
       ppd: 100,
-      storage: { imageBlobId: "YhmEnnYOSQpIQAR2wt2MBsDyRrD_yv3C_kDcRJFlA6o" },
+      storage: { imageBlobId: BISTRO_WALRUS.cover },
       items: [
         {
           id: "smash",
@@ -293,7 +296,7 @@ export const SEED_APPS: DappManifest[] = [
           priceUsd: 11,
           desc: "Double patty, house sauce",
           tag: "Mains",
-          imageBlobId: "lco75BC59-XZq7B4uSqSIC0VoJ0WQgjd-hl1RQiNxHQ",
+          imageBlobId: BISTRO_WALRUS.items.smash,
         },
         {
           id: "chicken",
@@ -301,7 +304,7 @@ export const SEED_APPS: DappManifest[] = [
           priceUsd: 10,
           desc: "Buttermilk-fried, pickles",
           tag: "Mains",
-          imageBlobId: "mpmLy0clMrF-0ll30EWkBWmqoCAulMVSv8bi607qJsI",
+          imageBlobId: BISTRO_WALRUS.items.chicken,
         },
         {
           id: "veg",
@@ -309,7 +312,7 @@ export const SEED_APPS: DappManifest[] = [
           priceUsd: 9,
           desc: "Grilled halloumi, slaw",
           tag: "Mains",
-          imageBlobId: "WSOoXUWinzD5Gq1WdoCqtTOrZmkHF_5s05IhKpJlV2g",
+          imageBlobId: BISTRO_WALRUS.items.veg,
         },
         {
           id: "fries",
@@ -317,35 +320,35 @@ export const SEED_APPS: DappManifest[] = [
           priceUsd: 5,
           desc: "Parmesan, herbs",
           tag: "Sides",
-          imageBlobId: "YYcDZgfXwx8R280p9borXSzsi77UretzESbWEGIfDR0",
+          imageBlobId: BISTRO_WALRUS.items.fries,
         },
         {
           id: "rings",
           name: "Onion Rings",
           priceUsd: 4.5,
           tag: "Sides",
-          imageBlobId: "2SuyDg902_wEjG_GJ7LMVWGizFeG91W_YkIDXdpx5lI",
+          imageBlobId: BISTRO_WALRUS.items.rings,
         },
         {
           id: "shake",
           name: "Salted Caramel Shake",
           priceUsd: 6,
           tag: "Drinks",
-          imageBlobId: "60QTjVKz9G3r3TIZOOW9OQns_R_MYp1C_ajP7c4QHtY",
+          imageBlobId: BISTRO_WALRUS.items.shake,
         },
         {
           id: "lemonade",
           name: "House Lemonade",
           priceUsd: 3.5,
           tag: "Drinks",
-          imageBlobId: "BeYp5kAfwVUA1OCpJcpIuNYpEPU-R3oVPULHqEPmGfk",
+          imageBlobId: BISTRO_WALRUS.items.lemonade,
         },
         {
           id: "coffee",
           name: "Cold Brew",
           priceUsd: 4,
           tag: "Drinks",
-          imageBlobId: "kHX533NdxooBQCgLVLxAUq6tnLirg84ehaDhrpX9oI0",
+          imageBlobId: BISTRO_WALRUS.items.coffee,
         },
       ],
     },
@@ -357,7 +360,7 @@ export const SEED_APPS: DappManifest[] = [
       tagline: "Coffee loyalty — 8 cups = free latte",
       description:
         "Buy your coffee in USDC and stamp your card — 8 cups earns a free latte, and every dollar earns points toward rewards.",
-      category: "Community",
+      category: "Food",
       secondary: "Finance",
       outcome: "You will pay for your coffee and collect one stamp.",
       perms: ["Read your wallet balance", "Send one USDC payment", "Stamp your card and add points"],
@@ -386,6 +389,7 @@ export const SEED_APPS: DappManifest[] = [
       },
     ],
   ),
+  // ── Community ──────────────────────────────────────────────────────────
   claim(
     {
       label: "daovote",
@@ -432,7 +436,8 @@ export const SEED_APPS: DappManifest[] = [
       name: "Savings Circle",
       tagline: "Rotating savings, transparent payouts",
       description: "Contribute to a rotating savings circle; the pot pays out to one member each round.",
-      category: "Community",
+      category: "Finance",
+      secondary: "Community",
       outcome: "You will contribute this round's amount to the circle.",
       perms: ["Read your wallet balance", "Send one USDC contribution", "Record your contribution"],
       submit: "Contribute",
@@ -628,14 +633,14 @@ export const SEED_APPS: DappManifest[] = [
     ],
   ),
 
-  // ── Events ─────────────────────────────────────────────────────────────
+  // ── Community (events, governance, membership) ───────────────────────
   claim(
     {
       label: "raffle",
       name: "Community Raffle",
       tagline: "One entry per verified human",
       description: "Enter a transparent raffle — one entry per verified human, winners picked fairly.",
-      category: "Events",
+      category: "Community",
       outcome: "You will enter the raffle once.",
       perms: ["Check you are a unique human", "Record your single entry"],
       worldId: true,
@@ -664,7 +669,7 @@ export const SEED_APPS: DappManifest[] = [
       name: "Ticket Claim",
       tagline: "Claim your event pass",
       description: "Claim your event pass. One pass per verified human — show it at the door.",
-      category: "Events",
+      category: "Community",
       outcome: "You will claim one event pass. One per verified human.",
       perms: ["Check you are a unique human", "Mint your event pass"],
       worldId: true,
@@ -705,7 +710,7 @@ export const SEED_APPS: DappManifest[] = [
       name: "Event RSVP",
       tagline: "RSVP once, save your spot",
       description: "RSVP to an event — one spot per verified human, no double-booking.",
-      category: "Events",
+      category: "Community",
       outcome: "You will RSVP once and save your spot.",
       perms: ["Check you are a unique human", "Record your RSVP"],
       worldId: true,

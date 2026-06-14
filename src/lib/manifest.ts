@@ -3,6 +3,7 @@
  * ever renders manifests that pass this gate (no arbitrary user code) - this is
  * also what keeps an AI generator policy-compliant inside World App.
  */
+import { normalizeCategory } from "./categories";
 import { APP } from "./config";
 import type { DappManifest } from "./types";
 
@@ -33,8 +34,6 @@ const COMPONENT_TYPES = [
   "capacityBar",
   "countdown",
 ];
-const CATEGORIES = ["Finance", "Community", "Agents", "Events", "Tools"];
-
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function validateManifest(input: any, creator = "a human"): ValidationResult {
   const errors: string[] = [];
@@ -51,7 +50,7 @@ export function validateManifest(input: any, creator = "a human"): ValidationRes
     .replace(/[^a-z0-9-]/g, "");
   if (!label) errors.push("ensLabel is required (lowercase letters, digits, hyphens)");
 
-  const category = CATEGORIES.includes(input.category) ? input.category : null;
+  const category = normalizeCategory(String(input.category ?? ""));
   if (!category) warnings.push(`category defaulted to Finance (got ${JSON.stringify(input.category)})`);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

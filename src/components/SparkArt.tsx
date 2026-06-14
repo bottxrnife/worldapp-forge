@@ -22,14 +22,15 @@ export function SparkArt({
   imageBlobId?: string;
 }) {
   if (imageBlobId) {
+    const radius = Math.round(size * 0.3);
     return (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img
-        src={`/api/blob/${imageBlobId}`}
-        alt={ens}
-        className={`shrink-0 object-cover ${className}`}
-        style={{ width: size, height: size, borderRadius: Math.round(size * 0.3) }}
-      />
+      <div
+        className={`shrink-0 overflow-hidden ${className}`}
+        style={{ width: size, height: size, borderRadius: radius }}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={`/api/blob/${imageBlobId}`} alt={ens} className="h-full w-full object-cover" />
+      </div>
     );
   }
   const accent = appAccent(ens);

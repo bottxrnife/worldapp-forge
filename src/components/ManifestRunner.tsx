@@ -803,7 +803,7 @@ function credKindFor(label: string, category: string): Credential["kind"] | null
   if (/raffle|lotter/.test(label)) return "entry";
   if (/ticket/.test(label)) return "pass";
   if (/rsvp/.test(label)) return "rsvp";
-  return category === "Events" ? "pass" : null;
+  return null;
 }
 function credSerial(kind: Credential["kind"]): string {
   if (kind === "entry") return `#${1000 + Math.floor(Math.random() * 9000)}`;

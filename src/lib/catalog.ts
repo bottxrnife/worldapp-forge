@@ -4,6 +4,8 @@
  * set. Resets on a serverless cold start — production would back it with a KV/DB
  * or rebuild it by enumerating ENS subnames.
  */
+import { applyBistroMedia } from "./bistroMedia";
+import { normalizeCategory } from "./categories";
 import { SEED_APPS } from "./seeds";
 import type { DappManifest } from "./types";
 
@@ -24,7 +26,7 @@ export type AppRecord = {
 
 const published: AppRecord[] = [];
 const manifests = new Map<string, DappManifest>();
-for (const m of SEED_APPS) manifests.set(m.ensName, m);
+for (const m of SEED_APPS) manifests.set(m.ensName, applyBistroMedia(m));
 
 function toRecord(m: DappManifest, ts: number, blobId?: string, featured?: boolean): AppRecord {
   const imageBlobId = m.storage?.imageBlobId;
@@ -46,15 +48,31 @@ function toRecord(m: DappManifest, ts: number, blobId?: string, featured?: boole
 }
 
 export function listApps(): AppRecord[] {
-  const seeds = SEED_APPS.map((m) => toRecord(m, 0));
+  const seeds = SEED_APPS.map((m) => toRecord(withNormalizedCategory(applyBistroMedia(m)), 0));
   return [...published, ...seeds];
 }
 
 export function addApp(manifest: DappManifest, blobId?: string): void {
-  manifests.set(manifest.ensName, manifest);
-  published.unshift(toRecord(manifest, Date.now(), blobId));
+  const stored = withNormalizedCategory(applyBistroMedia(manifest));
+  manifests.set(stored.ensName, stored);
+  published.unshift(toRecord(stored, Date.now(), blobId));
 }
 
 export function getManifest(ensName: string): DappManifest | undefined {
-  return manifests.get(ensName);
+  const m = manifests.get(ensName);
+  if (!m) {
+    // Match by label when ENS domain differs between envs (forge.eth vs forgedapp.eth).
+    const label = ensName.split(".")[0].toLowerCase();
+    const seed = SEED_APPS.find((s) => s.ensName.split(".")[0].toLowerCase() === label);
+    const base = seed ? applyBistroMedia({ ...seed, ensName }) : undefined;
+    return base ? withNormalizedCategory(base) : undefined;
+  }
+  return withNormalizedCategory(applyBistroMedia(m));
+}
+
+function withNormalizedCategory(m: DappManifest): DappManifest {
+  const category = normalizeCategory(m.category) ?? m.category;
+  const secondary = m.secondaryCategory ? (normalizeCategory(m.secondaryCategory) ?? m.secondaryCategory) : undefined;
+  if (category === m.category && secondary === m.secondaryCategory) return m;
+  return { ...m, category, secondaryCategory: secondary };
 }

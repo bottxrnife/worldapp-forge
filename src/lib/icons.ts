@@ -35,6 +35,11 @@ export const ICON_PATHS: Record<string, string[]> = {
   // UI glyphs
   plus: ["M12 5v14M5 12h14"],
   grid: ["M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z"],
+  qr: [
+    "M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4z",
+    "M16 16h2v2h-2zM18 18h2v2h-2zM16 20h2v2h-2zM20 16h2v2h-2zM20 20h2v2h-2z",
+    "M6 6h2v2H6zM16 6h2v2h-2zM6 16h2v2H6z",
+  ],
   chat: ["M21 11.5a7.5 7.5 0 0 1-10.8 6.7L4 20l1.8-5.2A7.5 7.5 0 1 1 21 11.5Z"],
   search: ["M10.5 4a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13Z", "M20 20l-4-4"],
   person: ["M12 11.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z", "M5 20a7 7 0 0 1 14 0"],
@@ -79,9 +84,9 @@ const BY_KEY: Array<[RegExp, string]> = [
 
 const BY_CAT: Record<string, string> = {
   Finance: "dollar",
+  Food: "food",
   Community: "people",
   Agents: "agent",
-  Events: "calendar",
   Tools: "tools",
 };
 

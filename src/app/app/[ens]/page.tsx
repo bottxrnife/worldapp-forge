@@ -2,11 +2,12 @@
 
 import { Icon } from "@/components/Icon";
 import { ManifestRunner } from "@/components/ManifestRunner";
+import { SparkQrButton } from "@/components/SparkQrSheet";
 import { Button } from "@/components/ui";
 import { useAuth } from "@/lib/auth";
 import type { AppRecord } from "@/lib/catalog";
 import { isSparkCreator } from "@/lib/creatorMatch";
-import { readShortcuts, toggleShortcut } from "@/lib/homeShortcuts";
+import { defaultHomeShortcuts, readShortcuts, toggleShortcut } from "@/lib/homeShortcuts";
 import { getMySparkManifest } from "@/lib/mySparks";
 import { sparkTheme } from "@/lib/sparkTheme";
 import type { DappManifest } from "@/lib/types";
@@ -56,7 +57,7 @@ export default function AppRun() {
     fetch("/api/catalog")
       .then((r) => r.json())
       .then((d) => {
-        const base = ((d.apps ?? []) as AppRecord[]).slice(0, 6).map((a) => a.ensName);
+        const base = defaultHomeShortcuts();
         setPinBase(base);
         setPinned(readShortcuts(base));
       })
@@ -88,6 +89,7 @@ export default function AppRun() {
             Edit
           </button>
         )}
+        <SparkQrButton ensName={ens} sparkName={manifest?.name ?? ens} />
         <button
           type="button"
           aria-label={isPinned ? "Unpin from Home" : "Pin to Home"}

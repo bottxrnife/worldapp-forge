@@ -138,7 +138,7 @@ export default function PublishPage() {
           </div>
           {draft.storage?.imageBlobId && (
             <div className="mt-3">
-              <WalrusProof blobId={draft.storage.imageBlobId} label="Cover on Walrus" />
+              <WalrusProof blobId={draft.storage.imageBlobId} label="Cover on Walrus" kind="image" />
             </div>
           )}
         </Card>
@@ -176,7 +176,7 @@ export default function PublishPage() {
                   <p className="truncate text-sm font-bold">{it.name}</p>
                   <p className="text-xs text-muted">${it.priceUsd.toFixed(2)}</p>
                   {it.imageBlobId && (
-                    <WalrusProof blobId={it.imageBlobId} label="Photo" compact />
+                    <WalrusProof blobId={it.imageBlobId} label="Photo" kind="image" compact />
                   )}
                 </div>
               </div>
@@ -228,7 +228,7 @@ export default function PublishPage() {
           ))}
           {result.blobId && (
             <div className="mt-3">
-              <WalrusProof blobId={result.blobId} label="Walrus manifest" />
+              <WalrusProof blobId={result.blobId} label="Walrus manifest" kind="manifest" />
             </div>
           )}
           {result.storageError && (

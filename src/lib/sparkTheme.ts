@@ -244,9 +244,9 @@ const THEMES: Record<string, SparkTheme> = {
 
 const BY_CATEGORY: Record<string, SparkTheme> = {
   Finance: THEMES.split,
+  Food: THEMES.bistro,
   Community: THEMES.fundraise,
   Agents: THEMES.agentmarket,
-  Events: THEMES.tickets,
   Tools: THEMES.parking,
 };
 

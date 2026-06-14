@@ -3,33 +3,19 @@
 import { FloatingNav } from "@/components/FloatingNav";
 import { Icon } from "@/components/Icon";
 import { SparkArt } from "@/components/SparkArt";
+import { HumanBadgeSlot } from "@/components/ui";
 import type { AppRecord } from "@/lib/catalog";
+import { CATALOG_CHIPS, SPARK_CATEGORIES, type CatalogChip, type SparkCategory } from "@/lib/categories";
 import { resolveMySparkApps } from "@/lib/mySparks";
 import Link from "next/link";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 
-/** Canonical category order — mirrors the agent + appStyle category set. */
-const CATEGORIES = ["Finance", "Community", "Agents", "Events", "Tools"] as const;
-type Category = (typeof CATEGORIES)[number];
-const CHIPS = ["All", ...CATEGORIES] as const;
-type Chip = (typeof CHIPS)[number];
+const CHIPS = CATALOG_CHIPS;
 
-/** Cover art for a Spark: its Walrus image if present, else a SparkArt tile. */
-function SparkCover({ a, className, artSize }: { a: AppRecord; className: string; artSize: number }) {
-  if (a.imageBlobId) {
-    return (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img src={`/api/blob/${a.imageBlobId}`} alt={`${a.name} cover`} className={`object-cover ${className}`} />
-    );
-  }
-  return (
-    <div className={`flex items-center justify-center ${className}`}>
-      <SparkArt ens={a.ensName} category={a.category} size={artSize} />
-    </div>
-  );
-}
+const CARD_ART = { featured: 80, default: 72 } as const;
 
 function SparkCard({ a, featured = false }: { a: AppRecord; featured?: boolean }) {
+  const artSize = featured ? CARD_ART.featured : CARD_ART.default;
   return (
     <Link
       href={`/app/${encodeURIComponent(a.ensName)}`}
@@ -37,21 +23,11 @@ function SparkCard({ a, featured = false }: { a: AppRecord; featured?: boolean }
         featured ? "w-[240px] rounded-[28px] p-3.5" : "w-[166px] rounded-3xl p-3"
       }`}
     >
-      <div className="relative">
-        <SparkCover
-          a={a}
-          className={`w-full ${featured ? "h-[140px] rounded-[22px]" : "h-[108px] rounded-2xl"}`}
-          artSize={featured ? 112 : 80}
-        />
+      <div className="flex justify-center">
+        <SparkArt ens={a.ensName} category={a.category} size={artSize} imageBlobId={a.imageBlobId} />
       </div>
-      <div className="mt-3 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-        <p className={`truncate font-bold ${featured ? "text-[16px]" : "text-[14px]"}`}>{a.name}</p>
-        {a.requiresWorldId && (
-          <span className="shrink-0 rounded-full bg-success-bg px-2 py-0.5 text-[9.5px] font-bold text-success">
-            Human
-          </span>
-        )}
-      </div>
+      <HumanBadgeSlot show={a.requiresWorldId} size={featured ? "md" : "sm"} />
+      <p className={`truncate font-bold ${featured ? "mt-1 text-[16px]" : "mt-1 text-[14px]"}`}>{a.name}</p>
       <p className={`mt-1 line-clamp-2 text-muted ${featured ? "text-[13px]" : "text-[12px] leading-snug"}`}>
         {a.tagline ?? a.description}
       </p>
@@ -79,7 +55,7 @@ export default function CatalogPage() {
   const [apps, setApps] = useState<AppRecord[]>([]);
   const [yours, setYours] = useState<AppRecord[]>([]);
   const [loading, setLoading] = useState(true);
-  const [chip, setChip] = useState<Chip>("All");
+  const [chip, setChip] = useState<CatalogChip>("All");
 
   useEffect(() => {
     fetch("/api/catalog")
@@ -101,19 +77,24 @@ export default function CatalogPage() {
 
   const yourSparks = useMemo(() => {
     if (chip === "All") return yours;
+    if (chip === "Featured") return yours.filter((a) => a.featured);
     return yours.filter((a) => a.category === chip);
   }, [yours, chip]);
 
   const sections = useMemo(
     () =>
-      CATEGORIES.map((cat) => ({
+      SPARK_CATEGORIES.map((cat) => ({
         cat,
         items: apps.filter((a) => a.category === cat && !mine.has(a.ensName)),
       })).filter((s) => s.items.length > 0),
     [apps, mine],
   );
 
-  const visible = sections.filter((s) => chip === "All" || s.cat === (chip as Category));
+  const showFeaturedRail = chip === "All" && featured.length > 0;
+  const featuredOnly = chip === "Featured";
+  const visible = featuredOnly
+    ? featured
+    : sections.filter((s) => chip === "All" || s.cat === (chip as SparkCategory)).flatMap((s) => s.items);
 
   return (
     <>
@@ -190,8 +171,7 @@ export default function CatalogPage() {
               </section>
             )}
 
-            {/* Featured rail */}
-            {featured.length > 0 && (
+            {showFeaturedRail && (
               <section className="mt-6">
                 <h3 className="display text-2xl font-extrabold">Featured</h3>
                 <Rail>
@@ -202,25 +182,46 @@ export default function CatalogPage() {
               </section>
             )}
 
-            {/* One horizontal rail per category */}
-            {visible.map((s) => (
-              <section key={s.cat} className="mt-8">
+            {featuredOnly && (
+              <section className="mt-6">
                 <div className="flex items-baseline justify-between">
-                  <h3 className="display text-2xl font-extrabold">{s.cat}</h3>
+                  <h3 className="display text-2xl font-extrabold">Featured</h3>
                   <span className="text-[13px] font-semibold text-muted">
-                    {s.items.length} {s.items.length === 1 ? "Spark" : "Sparks"}
+                    {featured.length} {featured.length === 1 ? "Spark" : "Sparks"}
                   </span>
                 </div>
                 <Rail>
-                  {s.items.map((a) => (
-                    <SparkCard key={a.ensName} a={a} />
+                  {featured.map((a) => (
+                    <SparkCard key={a.ensName} a={a} featured />
                   ))}
                 </Rail>
               </section>
-            ))}
+            )}
 
-            {visible.length === 0 && (
+            {!featuredOnly &&
+              sections
+                .filter((s) => chip === "All" || s.cat === (chip as SparkCategory))
+                .map((s) => (
+                  <section key={s.cat} className="mt-8">
+                    <div className="flex items-baseline justify-between">
+                      <h3 className="display text-2xl font-extrabold">{s.cat}</h3>
+                      <span className="text-[13px] font-semibold text-muted">
+                        {s.items.length} {s.items.length === 1 ? "Spark" : "Sparks"}
+                      </span>
+                    </div>
+                    <Rail>
+                      {s.items.map((a) => (
+                        <SparkCard key={a.ensName} a={a} />
+                      ))}
+                    </Rail>
+                  </section>
+                ))}
+
+            {chip !== "All" && !featuredOnly && sections.every((s) => s.cat !== chip || s.items.length === 0) && (
               <p className="mt-8 text-center text-sm text-muted">No Sparks in {chip} yet.</p>
+            )}
+            {featuredOnly && featured.length === 0 && (
+              <p className="mt-8 text-center text-sm text-muted">No featured Sparks yet.</p>
             )}
           </>
         )}

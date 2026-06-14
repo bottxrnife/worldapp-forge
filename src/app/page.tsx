@@ -3,11 +3,12 @@
 import { FloatingNav } from "@/components/FloatingNav";
 import { Icon } from "@/components/Icon";
 import { SparkArt } from "@/components/SparkArt";
+import { HumanBadgeSlot } from "@/components/ui";
 import { useAuth } from "@/lib/auth";
 import type { AppRecord } from "@/lib/catalog";
 import { APP } from "@/lib/config";
 import { useBackHandler } from "@/lib/backStack";
-import { getShortcuts, saveShortcuts } from "@/lib/homeShortcuts";
+import { initialHomeShortcuts, saveShortcuts } from "@/lib/homeShortcuts";
 import { resolveMySparkApps } from "@/lib/mySparks";
 import { getActivity, type ActivityEntry } from "@/lib/store";
 import {
@@ -32,11 +33,13 @@ function SortableSpark({
   ens,
   category,
   name,
+  imageBlobId,
   onRemove,
 }: {
   ens: string;
   category?: string;
   name: string;
+  imageBlobId?: string;
   onRemove: () => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: ens });
@@ -51,7 +54,7 @@ function SortableSpark({
           isDragging ? "z-10 scale-105 opacity-60" : ""
         }`}
       >
-        <SparkArt ens={ens} category={category} size={60} className="ring-2 ring-brand/30" />
+        <SparkArt ens={ens} category={category} size={60} imageBlobId={imageBlobId} className="ring-2 ring-brand/30" />
         <button
           onPointerDown={(e) => e.stopPropagation()}
           onClick={(e) => {
@@ -86,9 +89,8 @@ export default function Home() {
         const list: AppRecord[] = d.apps ?? [];
         setApps(list);
         setYours(resolveMySparkApps(list));
-        const valid = new Set(list.map((a) => a.ensName));
-        const initial = getShortcuts() ?? list.slice(0, 6).map((a) => a.ensName);
-        setOrder(initial.filter((e) => valid.has(e)));
+        const initial = initialHomeShortcuts(list, APP.ensDomain);
+        setOrder(initial);
       })
       .catch(() => {});
   }, []);
@@ -246,6 +248,7 @@ export default function Home() {
                       ens={ens}
                       category={rec?.category}
                       name={rec?.name ?? ensLabel(ens)}
+                      imageBlobId={rec?.imageBlobId}
                       onRemove={() => removeAt(i)}
                     />
                   );
@@ -278,7 +281,7 @@ export default function Home() {
               const rec = byEns.get(ens);
               return (
                 <Link key={ens} href={`/app/${encodeURIComponent(ens)}`} className="flex flex-col items-center gap-1.5">
-                  <SparkArt ens={ens} category={rec?.category} size={60} />
+                  <SparkArt ens={ens} category={rec?.category} size={60} imageBlobId={rec?.imageBlobId} />
                   <span className="w-full truncate text-center text-[11px] font-medium">{rec?.name ?? ensLabel(ens)}</span>
                 </Link>
               );
@@ -311,14 +314,8 @@ export default function Home() {
                   className="w-[230px] shrink-0 rounded-3xl bg-wash p-4 ring-2 ring-brand/20"
                 >
                   <SparkArt ens={a.ensName} category={a.category} size={48} imageBlobId={a.imageBlobId} />
-                  <div className="mt-3 flex items-center gap-2">
-                    <p className="text-[15px] font-bold">{a.name}</p>
-                    {a.requiresWorldId && (
-                      <span className="shrink-0 rounded-full bg-success-bg px-2 py-0.5 text-[10px] font-bold text-success">
-                        Human
-                      </span>
-                    )}
-                  </div>
+                  <HumanBadgeSlot show={a.requiresWorldId} size="md" />
+                  <p className="mt-1 text-[15px] font-bold">{a.name}</p>
                   <p className="mt-1 line-clamp-2 text-[13px] text-muted">{a.tagline ?? a.description}</p>
                 </Link>
               ))}
@@ -340,15 +337,9 @@ export default function Home() {
                   href={`/app/${encodeURIComponent(a.ensName)}`}
                   className="w-[230px] shrink-0 rounded-3xl bg-wash p-4"
                 >
-                  <SparkArt ens={a.ensName} category={a.category} size={48} />
-                  <div className="mt-3 flex items-center gap-2">
-                    <p className="text-[15px] font-bold">{a.name}</p>
-                    {a.requiresWorldId && (
-                      <span className="shrink-0 rounded-full bg-success-bg px-2 py-0.5 text-[10px] font-bold text-success">
-                        Human
-                      </span>
-                    )}
-                  </div>
+                  <SparkArt ens={a.ensName} category={a.category} size={48} imageBlobId={a.imageBlobId} />
+                  <HumanBadgeSlot show={a.requiresWorldId} size="md" />
+                  <p className="mt-1 text-[15px] font-bold">{a.name}</p>
                   <p className="mt-1 line-clamp-2 text-[13px] text-muted">{a.description}</p>
                 </Link>
               ))}
@@ -418,7 +409,7 @@ export default function Home() {
                     <div className="mt-2 flex flex-col gap-1.5">
                       {recents.map((a) => (
                         <div key={a.ensName} className="flex items-center gap-3 rounded-2xl bg-wash p-2.5">
-                          <SparkArt ens={a.ensName} category={a.category} size={40} />
+                          <SparkArt ens={a.ensName} category={a.category} size={40} imageBlobId={a.imageBlobId} />
                           <span className="flex-1 truncate text-[15px] font-semibold">{a.name}</span>
                           <button
                             onClick={() => add(a.ensName)}
@@ -444,7 +435,7 @@ export default function Home() {
                   <div className="mt-2 flex flex-col gap-1.5">
                     {filteredAvailable.map((a) => (
                       <div key={a.ensName} className="flex items-center gap-3 rounded-2xl bg-wash p-2.5">
-                        <SparkArt ens={a.ensName} category={a.category} size={40} />
+                        <SparkArt ens={a.ensName} category={a.category} size={40} imageBlobId={a.imageBlobId} />
                         <span className="flex-1 truncate text-[15px] font-semibold">{a.name}</span>
                         <button
                           onClick={() => add(a.ensName)}

@@ -18,7 +18,7 @@ const THEME_OPTIONS: { mode: ThemeMode; label: string; icon: string }[] = [
 ];
 
 // Per-device state cleared by the "Clear local data" row.
-const CLEAR_KEYS = ["forge.loyalty", "forge.activity", "forge.orders", "forge.conversations", "forge.home.shortcuts", "forge.mySparks"];
+const CLEAR_KEYS = ["forge.loyalty", "forge.activity", "forge.orders", "forge.conversations", "forge.home.shortcuts", "forge.home.shortcuts.v2", "forge.mySparks"];
 
 export default function ProfilePage() {
   const { user, signOut } = useAuth();

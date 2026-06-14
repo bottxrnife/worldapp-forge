@@ -5,6 +5,7 @@
  * to a deterministic template when no model credential is set.
  */
 import { APP } from "./config";
+import { SPARK_CATEGORIES } from "./categories";
 import { listApps } from "./catalog";
 import { getAgentProfile, resolveAddress, verifyName } from "./ens";
 import { validateManifest } from "./manifest";
@@ -103,7 +104,7 @@ const CAPABILITIES = {
     "one-claim-per-human",
     "one-membership-per-human",
   ],
-  categories: ["Finance", "Community", "Agents", "Events", "Tools"],
+  categories: [...SPARK_CATEGORIES],
   notes: [
     "Payments always settle in the user's World wallet on World Chain - never mention bridges or other chains.",
     "Every manifest must include exactly one submitButton.",
@@ -119,7 +120,7 @@ const MANIFEST_INPUT_SCHEMA = {
     name: { type: "string" },
     ensLabel: { type: "string", description: `subname label under ${APP.ensDomain}` },
     description: { type: "string" },
-    category: { type: "string", enum: ["Finance", "Community", "Agents", "Events", "Tools"] },
+    category: { type: "string", enum: [...SPARK_CATEGORIES] },
     outcome: { type: "string", description: 'plain English, starts with "You will …"' },
     components: {
       type: "array",
@@ -450,6 +451,7 @@ export async function runAgentTurn(
 function templateManifest(prompt: string, creator: string): DappManifest | null {
   const amount = prompt.match(/\$\s*(\d+(?:\.\d+)?)/)?.[1] ?? "5";
   const recipient = prompt.match(/\b([a-z0-9-]+\.eth)\b/i)?.[1]?.toLowerCase() ?? `treasury.${APP.ensDomain}`;
+  const food = /menu|restaurant|bistro|food|burger|cafe|coffee|order|kitchen/i.test(prompt);
   const loyalty = /loyal|stamp|punch|reward|coffee|cafe|caf\u00e9/i.test(prompt);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const components: any[] = [
@@ -463,7 +465,7 @@ function templateManifest(prompt: string, creator: string): DappManifest | null 
       name: loyalty ? "Loyalty Card" : "Collect Payment",
       ensLabel: loyalty ? "loyalty" : "collect",
       description: prompt.slice(0, 120),
-      category: loyalty ? "Community" : "Finance",
+      category: food || loyalty ? "Food" : "Finance",
       outcome: `You will pay $${amount}.`,
       components,
       permissions: {

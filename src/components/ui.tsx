@@ -60,3 +60,15 @@ export function Pill({
     <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-bold ${tones[tone]}`}>{children}</span>
   );
 }
+
+/** Centered slot between Spark art and title — fixed height keeps card rails aligned. */
+export function HumanBadgeSlot({ show, size = "sm" }: { show: boolean; size?: "sm" | "md" }) {
+  const text = size === "md" ? "text-[10px]" : "text-[9.5px]";
+  return (
+    <div className="mt-2 flex h-[18px] items-center justify-center">
+      {show && (
+        <span className={`rounded-full bg-success-bg px-2 py-0.5 font-bold text-success ${text}`}>Human</span>
+      )}
+    </div>
+  );
+}
