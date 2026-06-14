@@ -1,6 +1,7 @@
 "use client";
 
 import { SparkArt } from "@/components/SparkArt";
+import { EditableText } from "@/components/EditableField";
 import { ImageUploadSlot } from "@/components/ImageUploadSlot";
 import { sparkTheme, type SparkTheme } from "@/lib/sparkTheme";
 import type { DappManifest } from "@/lib/types";
@@ -12,6 +13,7 @@ export function SparkShell({
   compact,
   editable,
   onCoverImage,
+  onManifestChange,
 }: {
   manifest: DappManifest;
   children: ReactNode;
@@ -19,6 +21,7 @@ export function SparkShell({
   /** Preview / edit mode — tap the hero icon to upload a cover to Walrus. */
   editable?: boolean;
   onCoverImage?: (blobId: string) => void;
+  onManifestChange?: (m: DappManifest) => void;
 }) {
   const theme = sparkTheme(manifest);
   const vars = {
@@ -37,7 +40,14 @@ export function SparkShell({
         <SparkHero manifest={manifest} theme={theme} editable={editable} onCoverImage={onCoverImage} />
       )}
       {showCompactHero && (
-        <CompactEditableHero manifest={manifest} theme={theme} onCoverImage={onCoverImage} />
+        <CompactEditableHero
+          manifest={manifest}
+          theme={theme}
+          onCoverImage={onCoverImage}
+          onNameChange={
+            editable && onManifestChange ? (name) => onManifestChange({ ...manifest, name }) : undefined
+          }
+        />
       )}
       {children}
     </div>
@@ -49,10 +59,12 @@ function CompactEditableHero({
   manifest,
   theme,
   onCoverImage,
+  onNameChange,
 }: {
   manifest: DappManifest;
   theme: SparkTheme;
   onCoverImage: (blobId: string) => void;
+  onNameChange?: (name: string) => void;
 }) {
   return (
     <div
@@ -68,7 +80,15 @@ function CompactEditableHero({
       />
       <div className="min-w-0 flex-1">
         <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-white/60">{manifest.category}</p>
-        <p className="display truncate text-[17px] font-extrabold">{manifest.name}</p>
+        {onNameChange ? (
+          <EditableText
+            value={manifest.name}
+            onCommit={onNameChange}
+            className="display truncate text-[17px] font-extrabold text-white decoration-white/50"
+          />
+        ) : (
+          <p className="display truncate text-[17px] font-extrabold">{manifest.name}</p>
+        )}
       </div>
     </div>
   );

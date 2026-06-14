@@ -356,21 +356,14 @@ function CreatePageInner() {
               </div>
               <p className="mt-2.5 text-sm text-muted">{active.draft.description}</p>
               <p className="mt-2 text-[11px] text-faint">
-                Tap the icon to upload a cover · ask in chat to edit — e.g. “make it $10” or “add a memo”.
+                Open the editor to tap any text or price · use chat for bigger changes.
               </p>
               <div className="mt-3.5 flex gap-2">
                 <button
                   onClick={() => setPreview(true)}
                   className="flex-1 rounded-full bg-brand px-4 py-3 text-sm font-bold text-white shadow-pop active:scale-[0.98]"
                 >
-                  Preview
-                </button>
-                <button
-                  type="button"
-                  onClick={() => send("Help me revise this Spark — keep the same ENS name unless I ask to change it.")}
-                  className="rounded-full bg-wash px-4 py-3 text-sm font-bold text-ink active:scale-[0.98]"
-                >
-                  Edit
+                  Open editor
                 </button>
                 <Link
                   href="/publish"
@@ -436,7 +429,7 @@ function CreatePageInner() {
         <div className="fixed inset-0 z-[10000] flex flex-col bg-bg">
           <div className="shrink-0 border-b border-divider-soft bg-bg px-6 py-4">
             <div className="flex items-center gap-3">
-              <button onClick={() => setPreview(false)} aria-label="Close preview" className="shrink-0 text-xl leading-none text-muted active:scale-90">
+              <button onClick={() => setPreview(false)} aria-label="Close editor" className="shrink-0 text-xl leading-none text-muted active:scale-90">
                 ✕
               </button>
               <p className="display min-w-0 flex-1 truncate text-center text-base font-extrabold">{active.draft.name}</p>
@@ -452,7 +445,7 @@ function CreatePageInner() {
 
           <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-24 pt-4">
             <p className="mb-3 text-center text-[11px] font-semibold text-muted">
-              Tap + on icons or menu photos to upload to Walrus
+              Tap underlined text or prices to edit · tap + on icons for Walrus photos
             </p>
             <ManifestRunner
               manifest={active.draft}

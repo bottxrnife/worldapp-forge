@@ -1,5 +1,6 @@
 "use client";
 
+import { EditablePrice, EditableText } from "@/components/EditableField";
 import { Icon } from "@/components/Icon";
 import type { SparkTheme } from "@/lib/sparkTheme";
 import type { ManifestComponent, SparkFormState } from "@/lib/types";
@@ -18,6 +19,7 @@ import { useEffect, useState } from "react";
 
 type Props = {
   component: ManifestComponent;
+  componentIndex: number;
   ens: string;
   form: SparkFormState;
   theme: SparkTheme;
@@ -26,6 +28,8 @@ type Props = {
   selectedTip?: number;
   onTipSelect?: (amount: number) => void;
   hourlyRate?: number;
+  editable?: boolean;
+  onComponentChange?: (index: number, component: ManifestComponent) => void;
 };
 
 const INTERACTIVE = new Set([
@@ -79,6 +83,7 @@ function Panel({
 
 export function SparkComponent({
   component: c,
+  componentIndex,
   ens,
   form,
   theme,
@@ -87,30 +92,59 @@ export function SparkComponent({
   selectedTip,
   onTipSelect,
   hourlyRate,
+  editable,
+  onComponentChange,
 }: Props) {
   const accent = theme.accent;
+  const patch = (next: ManifestComponent) => onComponentChange?.(componentIndex, next);
 
   if (c.type === "infoCard") {
     const receipt = theme.layout === "receipt";
     return (
       <Panel theme={theme} className={receipt ? "border-t-2 border-dashed border-ink/20 font-mono" : ""}>
-        {c.badge && (
-          <span
-            className="mb-2 inline-block px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white"
-            style={{ background: accent, borderRadius: theme.radius }}
-          >
-            {c.badge}
-          </span>
-        )}
-        <p className="text-[15px] font-bold" style={{ color: theme.ink }}>
-          {c.title}
-        </p>
-        <ul className={`mt-2 flex flex-col gap-1.5 ${receipt ? "text-[12px]" : "text-[13px]"}`}>
-          {c.lines.map((line) => (
-            <li key={line} className="leading-snug text-muted">
-              {receipt ? `› ${line}` : line}
-            </li>
+        {c.badge &&
+          (editable ? (
+            <span
+              className="mb-2 inline-block px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white"
+              style={{ background: accent, borderRadius: theme.radius }}
+            >
+              <EditableText value={c.badge} onCommit={(badge) => patch({ ...c, badge })} className="text-white decoration-white/50" />
+            </span>
+          ) : (
+            <span
+              className="mb-2 inline-block px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white"
+              style={{ background: accent, borderRadius: theme.radius }}
+            >
+              {c.badge}
+            </span>
           ))}
+        {editable ? (
+          <EditableText value={c.title} onCommit={(title) => patch({ ...c, title })} className="text-[15px] font-bold" />
+        ) : (
+          <p className="text-[15px] font-bold" style={{ color: theme.ink }}>
+            {c.title}
+          </p>
+        )}
+        <ul className={`mt-2 flex flex-col gap-1.5 ${receipt ? "text-[12px]" : "text-[13px]"}`}>
+          {c.lines.map((line, li) =>
+            editable ? (
+              <li key={li}>
+                <EditableText
+                  value={line}
+                  onCommit={(next) => {
+                    const lines = [...c.lines];
+                    lines[li] = next;
+                    patch({ ...c, lines });
+                  }}
+                  className="leading-snug text-muted"
+                />
+              </li>
+            ) : (
+              <li key={line} className="leading-snug text-muted">
+                {receipt ? `› ${line}` : line}
+              </li>
+            ),
+          )}
         </ul>
         {c.body && c.body.length > 0 && (
           isUnlocked(ens) ? (
@@ -141,6 +175,44 @@ export function SparkComponent({
     const ticket = theme.layout === "ticket";
     const horizontal = theme.layout === "meter";
     const agent = theme.layout === "agent";
+
+    if (editable) {
+      return (
+        <Panel theme={theme}>
+          <EditableText
+            value={c.label}
+            onCommit={(label) => patch({ ...c, label })}
+            className="mb-3 block text-[13px] font-bold"
+          />
+          <div className="flex flex-col gap-2">
+            {c.options.map((opt, oi) => (
+              <div
+                key={opt.value}
+                className="flex flex-wrap items-center gap-2 rounded-xl bg-surface px-3 py-2.5"
+              >
+                <EditableText
+                  value={opt.label}
+                  onCommit={(label) => {
+                    const options = c.options.map((o, i) => (i === oi ? { ...o, label } : o));
+                    patch({ ...c, options });
+                  }}
+                  className="min-w-0 flex-1 text-[14px] font-semibold"
+                />
+                {opt.priceUsd != null && (
+                  <EditablePrice
+                    value={opt.priceUsd}
+                    onCommit={(priceUsd) => {
+                      const options = c.options.map((o, i) => (i === oi ? { ...o, priceUsd } : o));
+                      patch({ ...c, options });
+                    }}
+                  />
+                )}
+              </div>
+            ))}
+          </div>
+        </Panel>
+      );
+    }
 
     if (horizontal) {
       return (
@@ -246,9 +318,17 @@ export function SparkComponent({
     return (
       <Panel theme={theme} dark={meter} className={meter ? "border-2 border-[#EAB308]/40" : ""}>
         <div className="mb-3 flex items-center justify-between">
-          <p className={`text-[13px] font-bold uppercase tracking-wide ${meter ? "text-[#EAB308]" : ""}`} style={meter ? undefined : { color: theme.ink }}>
-            {c.label}
-          </p>
+          {editable ? (
+            <EditableText
+              value={c.label}
+              onCommit={(labelText) => patch({ ...c, label: labelText })}
+              className={`text-[13px] font-bold uppercase tracking-wide ${meter ? "text-[#EAB308]" : ""}`}
+            />
+          ) : (
+            <p className={`text-[13px] font-bold uppercase tracking-wide ${meter ? "text-[#EAB308]" : ""}`} style={meter ? undefined : { color: theme.ink }}>
+              {c.label}
+            </p>
+          )}
           <p className="display text-[24px] font-extrabold" style={{ color: meter ? "#EAB308" : accent }}>
             ${price.toFixed(2)}
           </p>
@@ -277,7 +357,15 @@ export function SparkComponent({
         />
         <div className={`mt-1 flex justify-between text-[11px] font-semibold ${meter ? "text-white/50" : "text-faint"}`}>
           <span>{c.minMinutes}m</span>
-          <span>${rate}/hr</span>
+          {editable ? (
+            <EditablePrice
+              value={rate}
+              onCommit={(pricePerHourUsd) => patch({ ...c, pricePerHourUsd })}
+              className="text-[11px]"
+            />
+          ) : (
+            <span>${rate}/hr</span>
+          )}
           <span>{c.maxMinutes >= 60 ? `${c.maxMinutes / 60}h` : `${c.maxMinutes}m`}</span>
         </div>
       </Panel>
@@ -326,13 +414,39 @@ export function SparkComponent({
     const jar = theme.layout === "jar";
     return (
       <Panel theme={theme} className={jar ? "text-center" : ""}>
-        <p className="mb-1 text-[13px] font-bold" style={{ color: theme.ink }}>
-          {c.label ?? "Tip amount"}
-        </p>
+        {editable ? (
+          <EditableText
+            value={c.label ?? "Tip amount"}
+            onCommit={(label) => patch({ ...c, label })}
+            className="mb-1 block text-[13px] font-bold"
+          />
+        ) : (
+          <p className="mb-1 text-[13px] font-bold" style={{ color: theme.ink }}>
+            {c.label ?? "Tip amount"}
+          </p>
+        )}
         {jar && <p className="mb-4 text-[12px] text-muted">Drop something in the jar</p>}
         <div className={`grid gap-2 ${jar ? "grid-cols-2" : "grid-cols-4"}`}>
-          {c.presets.map((p) => {
+          {c.presets.map((p, pi) => {
             const active = selectedTip === p;
+            if (editable) {
+              return (
+                <div
+                  key={pi}
+                  className="flex items-center justify-center py-3 font-bold"
+                  style={{ borderRadius: jar ? "9999px" : theme.radius, background: "var(--color-surface)" }}
+                >
+                  <EditablePrice
+                    value={p}
+                    onCommit={(next) => {
+                      const presets = [...c.presets];
+                      presets[pi] = next;
+                      patch({ ...c, presets });
+                    }}
+                  />
+                </div>
+              );
+            }
             return (
               <button
                 key={p}
@@ -362,8 +476,18 @@ export function SparkComponent({
     return (
       <Panel theme={theme} className="font-mono">
         <div className="mb-3 flex items-center justify-between text-[12px] uppercase tracking-wide text-muted">
-          <span>{c.label ?? "Split the bill"}</span>
-          <span>Total ${c.totalUsd.toFixed(2)}</span>
+          {editable ? (
+            <EditableText value={c.label ?? "Split the bill"} onCommit={(label) => patch({ ...c, label })} />
+          ) : (
+            <span>{c.label ?? "Split the bill"}</span>
+          )}
+          {editable ? (
+            <span className="inline-flex items-center gap-1">
+              Total <EditablePrice value={c.totalUsd} onCommit={(totalUsd) => patch({ ...c, totalUsd })} />
+            </span>
+          ) : (
+            <span>Total ${c.totalUsd.toFixed(2)}</span>
+          )}
         </div>
         <div className="mb-4 flex justify-center gap-1">
           {Array.from({ length: Math.min(people, 8) }).map((_, i) => (
@@ -427,9 +551,13 @@ export function SparkComponent({
     return (
       <Panel theme={theme}>
         <div className="mb-2 flex items-end justify-between">
-          <p className="text-[13px] font-bold" style={{ color: theme.ink }}>
-            {c.label ?? "Fundraising goal"}
-          </p>
+          {editable ? (
+            <EditableText value={c.label ?? "Fundraising goal"} onCommit={(label) => patch({ ...c, label })} className="text-[13px] font-bold" />
+          ) : (
+            <p className="text-[13px] font-bold" style={{ color: theme.ink }}>
+              {c.label ?? "Fundraising goal"}
+            </p>
+          )}
           <p className="display text-[22px] font-extrabold" style={{ color: accent }}>
             {pct}%
           </p>
@@ -438,7 +566,12 @@ export function SparkComponent({
           <div className="h-full transition-all" style={{ width: `${pct}%`, background: accent }} />
         </div>
         <p className="mt-2 text-[13px] text-muted">
-          ${raised.toLocaleString()} of ${c.goalUsd.toLocaleString()}
+          ${raised.toLocaleString()} of{" "}
+          {editable ? (
+            <EditablePrice value={c.goalUsd} onCommit={(goalUsd) => patch({ ...c, goalUsd })} className="inline" />
+          ) : (
+            `$${c.goalUsd.toLocaleString()}`
+          )}
           {c.supporters != null ? ` · ${c.supporters} humans chipped in` : ""}
         </p>
       </Panel>
@@ -500,10 +633,18 @@ export function SparkComponent({
     const terminal = theme.layout === "agent";
     return (
       <Panel theme={theme} dark={terminal}>
-        <label className={`mb-2 block text-[13px] font-bold ${terminal ? "font-mono text-brand" : ""}`} style={terminal ? undefined : { color: theme.ink }}>
-          {terminal ? "> " : ""}
-          {c.label}
-        </label>
+        {editable ? (
+          <EditableText
+            value={c.label}
+            onCommit={(label) => patch({ ...c, label })}
+            className={`mb-2 block text-[13px] font-bold ${terminal ? "font-mono text-brand" : ""}`}
+          />
+        ) : (
+          <label className={`mb-2 block text-[13px] font-bold ${terminal ? "font-mono text-brand" : ""}`} style={terminal ? undefined : { color: theme.ink }}>
+            {terminal ? "> " : ""}
+            {c.label}
+          </label>
+        )}
         <textarea
           value={String(form[c.key] ?? "")}
           onChange={(e) => setField(c.key, e.target.value)}
@@ -513,6 +654,17 @@ export function SparkComponent({
             terminal ? "rounded-md border border-white/10 bg-black/40 font-mono text-green-300" : "rounded-2xl bg-surface"
           }`}
         />
+        {editable && (
+          <p className="mt-2 text-[11px] text-muted">
+            Placeholder:{" "}
+            <EditableText
+              value={c.placeholder ?? ""}
+              onCommit={(placeholder) => patch({ ...c, placeholder })}
+              className="inline text-[11px]"
+              placeholder="Add placeholder…"
+            />
+          </p>
+        )}
       </Panel>
     );
   }
@@ -597,18 +749,45 @@ export function SparkComponent({
         style={{ background: theme.gradient, borderRadius: theme.radius }}
       >
         <div className="absolute inset-x-0 top-8 h-8 bg-gradient-to-r from-transparent via-white/20 to-transparent" />
-        <div className="flex items-start justify-between">
-          <div>
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
             <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-white/55">Member pass</p>
-            <p className="display mt-1 text-[22px] font-extrabold">{c.tier}</p>
+            {editable ? (
+              <EditableText
+                value={c.tier}
+                onCommit={(tier) => patch({ ...c, tier })}
+                className="display mt-1 text-[22px] font-extrabold text-white decoration-white/50"
+              />
+            ) : (
+              <p className="display mt-1 text-[22px] font-extrabold">{c.tier}</p>
+            )}
           </div>
-          <p className="display text-[20px] font-extrabold">${c.priceUsd}/mo</p>
+          {editable ? (
+            <span className="display shrink-0 text-[20px] font-extrabold">
+              <EditablePrice value={c.priceUsd} onCommit={(priceUsd) => patch({ ...c, priceUsd })} className="text-white decoration-white/50" />
+              <span className="text-[14px]">/mo</span>
+            </span>
+          ) : (
+            <p className="display shrink-0 text-[20px] font-extrabold">${c.priceUsd}/mo</p>
+          )}
         </div>
         <ul className="mt-4 flex flex-col gap-2">
-          {c.benefits.map((b) => (
-            <li key={b} className="flex items-center gap-2 text-[13px] text-white/90">
+          {c.benefits.map((b, bi) => (
+            <li key={bi} className="flex items-center gap-2 text-[13px] text-white/90">
               <Icon name="check" className="h-4 w-4 shrink-0 text-white" />
-              {b}
+              {editable ? (
+                <EditableText
+                  value={b}
+                  onCommit={(next) => {
+                    const benefits = [...c.benefits];
+                    benefits[bi] = next;
+                    patch({ ...c, benefits });
+                  }}
+                  className="text-white/90 decoration-white/50"
+                />
+              ) : (
+                b
+              )}
             </li>
           ))}
         </ul>

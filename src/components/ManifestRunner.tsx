@@ -1,5 +1,6 @@
 "use client";
 
+import { EditablePrice, EditableText } from "@/components/EditableField";
 import { Icon } from "@/components/Icon";
 import { PunchCard } from "@/components/PunchCard";
 import { RestaurantApp } from "@/components/RestaurantApp";
@@ -12,6 +13,7 @@ import { useAuth } from "@/lib/auth";
 import Link from "next/link";
 import { payWorld } from "@/lib/pay";
 import { buildMemo, deriveAmount, initFormState, validateForm } from "@/lib/sparkForm";
+import { patchComponent } from "@/lib/manifestEdit";
 import { sparkTheme } from "@/lib/sparkTheme";
 import {
   addFundraiserRaised,
@@ -79,6 +81,10 @@ export function ManifestRunner({
 }) {
   const ens = manifest.ensName;
   const theme = sparkTheme(manifest);
+  const isEditor = !!(editable && onManifestChange);
+  const patch = (next: DappManifest) => onManifestChange?.(next);
+  const patchComp = (index: number, component: ManifestComponent) =>
+    patch(patchComponent(manifest, index, component));
   const { user } = useAuth();
   const holder =
     user && !user.guest
@@ -89,6 +95,7 @@ export function ManifestRunner({
   const recipientComp = manifest.components.find((c) => c.type === "recipient") as Extract<ManifestComponent, { type: "recipient" }> | undefined;
   const punch = manifest.components.find((c) => c.type === "punchCard") as Extract<ManifestComponent, { type: "punchCard" }> | undefined;
   const memoComp = manifest.components.find((c) => c.type === "memoInput") as Extract<ManifestComponent, { type: "memoInput" }> | undefined;
+  const submitIdx = manifest.components.findIndex((c) => c.type === "submitButton");
   const submitLabel = (manifest.components.find((c) => c.type === "submitButton") as { label: string } | undefined)?.label ?? "Run";
   const hasDerivedAmount = manifest.components.some(
     (c) =>
@@ -101,7 +108,7 @@ export function ManifestRunner({
   const [memo, setMemo] = useState(memoComp?.default ?? "");
   const [amount, setAmount] = useState(amountComp?.default ?? "");
   const [selectedTip, setSelectedTip] = useState<number | undefined>(undefined);
-  const [verified, setVerified] = useState(!manifest.permissions.requiresWorldId);
+  const [verified, setVerified] = useState(isEditor || !manifest.permissions.requiresWorldId);
   const [step, setStep] = useState(-1);
   const [done, setDone] = useState<Done>(null);
   const [formError, setFormError] = useState<string | null>(null);
@@ -198,6 +205,8 @@ export function ManifestRunner({
       />
     );
   }
+
+  const submitComponent = submitIdx >= 0 ? manifest.components[submitIdx] : null;
 
   async function run() {
     const err = validateForm(manifest, form);
@@ -418,19 +427,31 @@ export function ManifestRunner({
       manifest={manifest}
       compact={compact}
       editable={editable}
+      onManifestChange={onManifestChange}
       onCoverImage={
-        editable && onManifestChange
+        isEditor
           ? (blobId) =>
-              onManifestChange({
+              patch({
                 ...manifest,
                 storage: { ...manifest.storage, imageBlobId: blobId },
               })
           : undefined
       }
     >
-      <p className="rounded-2xl px-4 py-3 text-[14px] font-medium leading-snug" style={{ background: theme.soft, color: theme.ink }}>
-        {manifest.outcome}
-      </p>
+      {isEditor ? (
+        <div className="rounded-2xl px-4 py-3" style={{ background: theme.soft }}>
+          <EditableText
+            value={manifest.outcome}
+            onCommit={(outcome) => patch({ ...manifest, outcome })}
+            multiline
+            className="block w-full text-[14px] font-medium leading-snug"
+          />
+        </div>
+      ) : (
+        <p className="rounded-2xl px-4 py-3 text-[14px] font-medium leading-snug" style={{ background: theme.soft, color: theme.ink }}>
+          {manifest.outcome}
+        </p>
+      )}
       {manifest.permissions.requiresWorldId && (
         <Pill tone="green">World ID · {manifest.permissions.worldPolicy ?? "one per human"}</Pill>
       )}
@@ -441,6 +462,7 @@ export function ManifestRunner({
             <SparkComponent
               key={`${c.type}-${i}`}
               component={c}
+              componentIndex={i}
               ens={ens}
               theme={theme}
               form={form}
@@ -456,6 +478,8 @@ export function ManifestRunner({
                 setFormError(null);
               }}
               hourlyRate={c.type === "durationPicker" ? parkingHourlyRate : undefined}
+              editable={isEditor}
+              onComponentChange={isEditor ? patchComp : undefined}
             />
           );
         }
@@ -475,20 +499,22 @@ export function ManifestRunner({
 
       {amountComp && !hasDerivedAmount && (
         <Row theme={theme} label="Amount">
-          {amountComp.locked ? (
-            <span>
-              <span className="font-bold">${amountComp.default}</span> <span className="text-muted">{amountComp.token}</span>
-            </span>
-          ) : (
+          {isEditor || !amountComp.locked ? (
             <span className="flex items-center justify-end gap-1">
-              $
-              <input
-                value={amount}
-                onChange={(e) => setAmount(e.target.value.replace(/[^0-9.]/g, ""))}
-                inputMode="decimal"
-                className="w-16 bg-transparent text-right font-bold outline-none"
+              <EditablePrice
+                value={parseFloat(amount || amountComp.default || "0") || 0}
+                onCommit={(n) => {
+                  const defaultStr = String(n);
+                  setAmount(defaultStr);
+                  const idx = manifest.components.findIndex((x) => x.type === "amountInput");
+                  if (idx >= 0) patchComp(idx, { ...amountComp, default: defaultStr });
+                }}
               />
               <span className="text-muted">{amountComp.token}</span>
+            </span>
+          ) : (
+            <span>
+              <span className="font-bold">${amountComp.default}</span> <span className="text-muted">{amountComp.token}</span>
             </span>
           )}
         </Row>
@@ -509,14 +535,43 @@ export function ManifestRunner({
       )}
       {memoComp && (
         <Row theme={theme} label="Memo">
-          <input value={memo} onChange={(e) => setMemo(e.target.value)} className="w-full bg-transparent text-right outline-none" />
+          {isEditor ? (
+            <EditableText
+              value={memo}
+              onCommit={(defaultMemo) => {
+                setMemo(defaultMemo);
+                const idx = manifest.components.findIndex((x) => x.type === "memoInput");
+                if (idx >= 0) patchComp(idx, { ...memoComp, default: defaultMemo });
+              }}
+              className="w-full text-right text-sm"
+            />
+          ) : (
+            <input value={memo} onChange={(e) => setMemo(e.target.value)} className="w-full bg-transparent text-right outline-none" />
+          )}
         </Row>
       )}
 
       {step === -1 && !done && (
         <>
-          {!verified ? (
+          {!isEditor && !verified ? (
             <VerifyButton signal={ens} onVerified={() => setVerified(true)} />
+          ) : isEditor ? (
+            <div
+              className="flex w-full items-center justify-center gap-2 rounded-3xl border-2 border-dashed border-brand/40 bg-brand-soft px-5 py-4 text-center"
+            >
+              {submitComponent?.type === "submitButton" ? (
+                <EditableText
+                  value={submitComponent.label}
+                  onCommit={(label) => patchComp(submitIdx, { ...submitComponent, label })}
+                  className="text-[15px] font-bold text-brand-strong"
+                />
+              ) : (
+                <span className="text-[15px] font-bold text-brand-strong">{submitLabel}</span>
+              )}
+              {total > 0 ? (
+                <span className="text-[15px] font-bold text-brand-strong">· ${total.toFixed(2)}</span>
+              ) : null}
+            </div>
           ) : cardFull ? (
             <button
               onClick={redeem}

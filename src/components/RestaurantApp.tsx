@@ -1,5 +1,6 @@
 "use client";
 
+import { EditablePrice, EditableText } from "@/components/EditableField";
 import { Icon } from "@/components/Icon";
 import { ImageUploadSlot } from "@/components/ImageUploadSlot";
 import { SparkCta, SparkShell } from "@/components/SparkShell";
@@ -90,6 +91,7 @@ export function RestaurantApp({
 }) {
   const ens = manifest.ensName;
   const theme = sparkTheme(manifest);
+  const isEditor = !!(editable && onManifestChange);
   const { user } = useAuth();
   const handle = user?.guest ? "guest" : user?.username ? `@${user.username}` : short(user?.address);
 
@@ -177,6 +179,7 @@ export function RestaurantApp({
       manifest={manifest}
       compact={compact}
       editable={editable}
+      onManifestChange={onManifestChange}
       onCoverImage={
         editable && onManifestChange
           ? (blobId) =>
@@ -257,39 +260,116 @@ export function RestaurantApp({
                       }
                     />
                     <div className="min-w-0">
-                      <p className="truncate text-[14px] font-bold">{it.name}</p>
-                      <p className="text-[12px] text-muted">
-                        ${it.priceUsd.toFixed(2)}
-                        {it.desc ? ` · ${it.desc}` : ""}
-                      </p>
+                      {editable && onManifestChange ? (
+                        <>
+                          <EditableText
+                            value={it.name}
+                            onCommit={(name) =>
+                              onManifestChange({
+                                ...manifest,
+                                components: manifest.components.map((c) =>
+                                  c.type === "menu"
+                                    ? { ...c, items: c.items.map((row) => (row.id === it.id ? { ...row, name } : row)) }
+                                    : c,
+                                ),
+                              })
+                            }
+                            className="block truncate text-[14px] font-bold"
+                          />
+                          <p className="text-[12px] text-muted">
+                            <EditablePrice
+                              value={it.priceUsd}
+                              onCommit={(priceUsd) =>
+                                onManifestChange({
+                                  ...manifest,
+                                  components: manifest.components.map((c) =>
+                                    c.type === "menu"
+                                      ? { ...c, items: c.items.map((row) => (row.id === it.id ? { ...row, priceUsd } : row)) }
+                                      : c,
+                                  ),
+                                })
+                              }
+                              className="inline"
+                            />
+                            {" · "}
+                            <EditableText
+                              value={it.desc ?? ""}
+                              onCommit={(desc) =>
+                                onManifestChange({
+                                  ...manifest,
+                                  components: manifest.components.map((c) =>
+                                    c.type === "menu"
+                                      ? { ...c, items: c.items.map((row) => (row.id === it.id ? { ...row, desc: desc || undefined } : row)) }
+                                      : c,
+                                  ),
+                                })
+                              }
+                              placeholder="Add description…"
+                              className="inline text-[12px]"
+                            />
+                          </p>
+                        </>
+                      ) : (
+                        <>
+                          <p className="truncate text-[14px] font-bold">{it.name}</p>
+                          <p className="text-[12px] text-muted">
+                            ${it.priceUsd.toFixed(2)}
+                            {it.desc ? ` · ${it.desc}` : ""}
+                          </p>
+                        </>
+                      )}
                     </div>
                   </div>
-                  {cart[it.id] ? (
-                    <div className="flex items-center gap-3">
-                      <button onClick={() => remove(it.id)} className="h-7 w-7 rounded-full bg-surface font-bold" style={{ color: theme.accent }}>−</button>
-                      <span className="w-4 text-center text-sm font-bold">{cart[it.id]}</span>
-                      <button onClick={() => add(it.id)} className="h-7 w-7 rounded-full bg-surface font-bold" style={{ color: theme.accent }}>+</button>
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => add(it.id)}
-                      className="px-3.5 py-1.5 text-[13px] font-bold text-white"
-                      style={{ background: theme.accent, borderRadius: theme.radius }}
-                    >
-                      Add
-                    </button>
-                  )}
+                  {!isEditor &&
+                    (cart[it.id] ? (
+                      <div className="flex items-center gap-3">
+                        <button onClick={() => remove(it.id)} className="h-7 w-7 rounded-full bg-surface font-bold" style={{ color: theme.accent }}>−</button>
+                        <span className="w-4 text-center text-sm font-bold">{cart[it.id]}</span>
+                        <button onClick={() => add(it.id)} className="h-7 w-7 rounded-full bg-surface font-bold" style={{ color: theme.accent }}>+</button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => add(it.id)}
+                        className="px-3.5 py-1.5 text-[13px] font-bold text-white"
+                        style={{ background: theme.accent, borderRadius: theme.radius }}
+                      >
+                        Add
+                      </button>
+                    ))}
                 </div>
               ))}
             </div>
           ))}
-          <SparkCta theme={theme} disabled={cartCount === 0 || paying} onClick={placeAndPay}>
-            {paying
-              ? "Placing your order…"
-              : cartCount === 0
-                ? "Add items to your order"
-                : `Place order · $${cartTotal.toFixed(2)} (+${Math.round(cartTotal * ppd)} pts)`}
-          </SparkCta>
+          {isEditor ? (
+            <div className="rounded-3xl border-2 border-dashed border-brand/40 bg-brand-soft px-5 py-4 text-center">
+              {(() => {
+                const submitIdx = manifest.components.findIndex((c) => c.type === "submitButton");
+                const submit = submitIdx >= 0 ? manifest.components[submitIdx] : null;
+                return submit?.type === "submitButton" ? (
+                  <EditableText
+                    value={submit.label}
+                    onCommit={(label) =>
+                      onManifestChange!({
+                        ...manifest,
+                        components: manifest.components.map((c, i) => (i === submitIdx && c.type === "submitButton" ? { ...c, label } : c)),
+                      })
+                    }
+                    className="text-[15px] font-bold text-brand-strong"
+                  />
+                ) : (
+                  <span className="text-[15px] font-bold text-brand-strong">Place order</span>
+                );
+              })()}
+            </div>
+          ) : (
+            <SparkCta theme={theme} disabled={cartCount === 0 || paying} onClick={placeAndPay}>
+              {paying
+                ? "Placing your order…"
+                : cartCount === 0
+                  ? "Add items to your order"
+                  : `Place order · $${cartTotal.toFixed(2)} (+${Math.round(cartTotal * ppd)} pts)`}
+            </SparkCta>
+          )}
         </>
       )}
 
