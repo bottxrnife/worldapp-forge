@@ -83,3 +83,10 @@ export function toggleShortcut(ens: string, fallback: string[] = defaultHomeShor
   const next = cur.includes(ens) ? cur.filter((e) => e !== ens) : [...cur, ens];
   return saveShortcuts(next);
 }
+
+/** Drop a Spark from the Home grid after delete or unpublish. */
+export function removeShortcut(ens: string, fallback: string[] = defaultHomeShortcuts()): string[] {
+  const cur = getShortcuts() ?? fallback;
+  if (!cur.includes(ens)) return cur;
+  return saveShortcuts(cur.filter((e) => e !== ens));
+}

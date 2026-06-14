@@ -87,6 +87,14 @@ export function addMySpark(manifest: DappManifest, blobId?: string): void {
   write([entry, ...rest]);
 }
 
+export function removeMySpark(ensName: string): void {
+  write(read().filter((s) => s.ensName !== ensName));
+}
+
+export function isMySpark(ensName: string): boolean {
+  return read().some((s) => s.ensName === ensName);
+}
+
 /** ENS names the user published on this device. */
 export function mySparkEnsNames(): Set<string> {
   return new Set(read().map((s) => s.ensName));

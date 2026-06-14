@@ -2,6 +2,7 @@
 
 import { Icon } from "@/components/Icon";
 import { ManifestRunner } from "@/components/ManifestRunner";
+import { DeleteSparkButton } from "@/components/DeleteSparkButton";
 import { SparkQrButton } from "@/components/SparkQrSheet";
 import { Button } from "@/components/ui";
 import { useAuth } from "@/lib/auth";
@@ -90,6 +91,9 @@ export default function AppRun() {
           </button>
         )}
         <SparkQrButton ensName={ens} sparkName={manifest?.name ?? ens} />
+        {status === "ok" && manifest && (
+          <DeleteSparkButton ensName={ens} sparkName={manifest.name} manifest={manifest} user={user} />
+        )}
         <button
           type="button"
           aria-label={isPinned ? "Unpin from Home" : "Pin to Home"}

@@ -58,6 +58,22 @@ export function addApp(manifest: DappManifest, blobId?: string): void {
   published.unshift(toRecord(stored, Date.now(), blobId));
 }
 
+/** True for built-in sample Sparks (matched by ENS label). */
+export function isSeedEns(ensName: string): boolean {
+  const label = ensName.split(".")[0].toLowerCase();
+  return SEED_APPS.some((s) => s.ensName.split(".")[0].toLowerCase() === label);
+}
+
+/** Remove a user-published Spark from the in-memory catalog. Seeds cannot be deleted. */
+export function removePublishedApp(ensName: string): boolean {
+  if (isSeedEns(ensName)) return false;
+  const idx = published.findIndex((a) => a.ensName === ensName);
+  if (idx < 0) return false;
+  published.splice(idx, 1);
+  manifests.delete(ensName);
+  return true;
+}
+
 export function getManifest(ensName: string): DappManifest | undefined {
   const m = manifests.get(ensName);
   if (!m) {

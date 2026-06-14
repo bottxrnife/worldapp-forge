@@ -1,4 +1,6 @@
 import type { DappManifest } from "./types";
+import { isSeedEns } from "./catalog";
+import { isMySpark } from "./mySparks";
 
 type UserLike = { guest?: boolean; username?: string; address?: string } | null | undefined;
 
@@ -11,4 +13,11 @@ export function isSparkCreator(manifest: DappManifest, user: UserLike): boolean 
   const a = user.address?.toLowerCase();
   if (a && c.includes(a.slice(2, 10))) return true;
   return false;
+}
+
+/** True when the user may delete this Spark (creator, device publish, not a seed). */
+export function canDeleteSpark(manifest: DappManifest, user: UserLike, ensName: string): boolean {
+  if (isSeedEns(ensName)) return false;
+  if (isMySpark(ensName)) return true;
+  return isSparkCreator(manifest, user);
 }
