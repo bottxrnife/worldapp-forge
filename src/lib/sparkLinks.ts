@@ -36,3 +36,19 @@ export function sparkWorldAppUrl(ensName: string): string | null {
 export function sparkQrUrl(ensName: string, origin?: string): string {
   return sparkWorldAppUrl(ensName) ?? `${origin ?? ""}${sparkRunPath(ensName)}`;
 }
+
+/**
+ * World App universal link — opens Forge at any in-app path (default home `/`).
+ * Format: https://world.org/mini-app?app_id=…&path=%2F
+ */
+export function forgeWorldAppUrl(path = "/"): string | null {
+  const appId = APP.worldAppId;
+  if (!appId.startsWith("app_")) return null;
+  const fullPath = path.startsWith("/") ? path : `/${path}`;
+  return `https://world.org/mini-app?app_id=${appId}&path=${encodeURIComponent(fullPath)}`;
+}
+
+/** QR payload for opening Forge in World App — deeplink when configured, else site URL. */
+export function forgeQrUrl(path = "/", origin?: string): string {
+  return forgeWorldAppUrl(path) ?? `${origin ?? ""}${path.startsWith("/") ? path : `/${path}`}`;
+}

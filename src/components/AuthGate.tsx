@@ -2,12 +2,13 @@
 
 import { Icon } from "@/components/Icon";
 import { Landing } from "@/components/Landing";
+import { PreviewWorldAppBanner } from "@/components/OpenWithWorldApp";
 import { useAuth } from "@/lib/auth";
 
 /** Gate the whole app behind World sign-in. Shows a brief splash while the
  *  session resolves, the Landing when signed out, the app when signed in. */
 export function AuthGate({ children }: { children: React.ReactNode }) {
-  const { user, ready } = useAuth();
+  const { user, ready, inWorldApp } = useAuth();
 
   if (!ready) {
     return (
@@ -19,5 +20,12 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     );
   }
 
-  return user ? <>{children}</> : <Landing />;
+  if (!user) return <Landing />;
+
+  return (
+    <>
+      {user.guest && !inWorldApp ? <PreviewWorldAppBanner /> : null}
+      {children}
+    </>
+  );
 }

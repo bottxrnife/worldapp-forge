@@ -1,6 +1,7 @@
 "use client";
 
 import { Icon } from "@/components/Icon";
+import { OpenWithWorldAppButton } from "@/components/OpenWithWorldApp";
 import { useAuth } from "@/lib/auth";
 import { APP } from "@/lib/config";
 
@@ -44,9 +45,14 @@ export function Landing() {
         >
           {status === "signing" ? "Opening World…" : inWorldApp ? "Sign in with World" : "Preview Forge"}
         </button>
+        {!inWorldApp ? (
+          <div className="mt-3">
+            <OpenWithWorldAppButton />
+          </div>
+        ) : null}
         {error && <p className="mt-3 text-center text-sm font-semibold text-warn">{error}</p>}
         <p className="mt-3 text-center text-xs text-faint">
-          {inWorldApp ? "Tap to continue with your World account." : "Open inside World App for the full experience."}
+          {inWorldApp ? "Tap to continue with your World account." : "Preview in browser, or scan to open in World App."}
         </p>
       </div>
     </main>
