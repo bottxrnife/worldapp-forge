@@ -87,6 +87,9 @@ export function validateManifest(input: any, creator = "a human"): ValidationRes
     if (c?.type === "choiceGroup") {
       const opts = Array.isArray(c.options) ? c.options : [];
       if (!c.key || !c.label || opts.length < 2) errors.push("choiceGroup needs key, label, and at least 2 options");
+      const wantsImages =
+        c.optionImages || opts.some((o: { imagePlaceholder?: boolean; imageBlobId?: string }) => o.imagePlaceholder || o.imageBlobId);
+      if (wantsImages) c.optionImages = true;
     }
     if (c?.type === "durationPicker") {
       if (

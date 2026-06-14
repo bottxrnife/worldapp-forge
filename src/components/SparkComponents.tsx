@@ -1,9 +1,10 @@
 "use client";
 
 import { EditablePrice, EditableText } from "@/components/EditableField";
+import { ImageUploadSlot } from "@/components/ImageUploadSlot";
 import { Icon } from "@/components/Icon";
 import type { SparkTheme } from "@/lib/sparkTheme";
-import type { ManifestComponent, SparkFormState } from "@/lib/types";
+import type { ChoiceOption, ManifestComponent, SparkFormState } from "@/lib/types";
 import {
   addTransitRide,
   getCredential,
@@ -52,6 +53,59 @@ const INTERACTIVE = new Set([
 
 export function isInteractiveComponent(type: string): boolean {
   return INTERACTIVE.has(type);
+}
+
+function optionShowsImage(
+  c: Extract<ManifestComponent, { type: "choiceGroup" }>,
+  opt: ChoiceOption,
+  editable?: boolean,
+): boolean {
+  if (opt.imageBlobId) return true;
+  return !!(editable && (c.optionImages || opt.imagePlaceholder));
+}
+
+function OptionImage({
+  opt,
+  editable,
+  onUploaded,
+  active,
+}: {
+  opt: ChoiceOption;
+  editable?: boolean;
+  onUploaded?: (blobId: string) => void;
+  active?: boolean;
+}) {
+  if (editable && onUploaded) {
+    return (
+      <ImageUploadSlot
+        blobId={opt.imageBlobId}
+        alt={opt.label}
+        size={48}
+        rounded="rounded-xl"
+        onUploaded={onUploaded}
+      />
+    );
+  }
+  if (opt.imageBlobId) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={`/api/blob/${opt.imageBlobId}`}
+        alt={opt.label}
+        className="h-12 w-12 shrink-0 rounded-xl object-cover ring-1 ring-divider-soft"
+      />
+    );
+  }
+  if (!editable) return null;
+  return (
+    <span
+      className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ring-1 ring-divider-soft ${
+        active ? "bg-white/15" : "bg-[var(--spark-surface)]"
+      }`}
+    >
+      <Icon name="plus" size={16} className={active ? "text-white/60" : "text-faint"} />
+    </span>
+  );
 }
 
 function Panel({
@@ -193,6 +247,16 @@ export function SparkComponent({
                 key={opt.value}
                 className="flex flex-wrap items-center gap-2 rounded-xl bg-[var(--spark-surface)] px-3 py-2.5"
               >
+                {optionShowsImage(c, opt, editable) && (
+                  <OptionImage
+                    opt={opt}
+                    editable
+                    onUploaded={(blobId) => {
+                      const options = c.options.map((o, i) => (i === oi ? { ...o, imageBlobId: blobId } : o));
+                      patch({ ...c, options, optionImages: true });
+                    }}
+                  />
+                )}
                 <EditableText
                   value={opt.label}
                   onCommit={(label) => {
@@ -281,6 +345,7 @@ export function SparkComponent({
                     {active && <span className="h-2.5 w-2.5 rounded-full bg-white" />}
                   </span>
                 )}
+                {optionShowsImage(c, opt, editable) && <OptionImage opt={opt} active={active} />}
                 <span className="min-w-0 flex-1">
                   <span className="block text-[14px] font-semibold">{opt.label}</span>
                   {agent && (opt.ens || opt.rating != null) && (

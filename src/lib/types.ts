@@ -14,6 +14,10 @@ export type ChoiceOption = {
   runs?: number;
   /** Render the option as locked / ungated (e.g. invite-only ticket tier). */
   locked?: boolean;
+  /** Walrus blob id for an option photo (ticket tier, product pick, etc.). */
+  imageBlobId?: string;
+  /** Agent hint — reserved slot for creator upload; treated like optionImages on the group. */
+  imagePlaceholder?: boolean;
 };
 
 export type ManifestComponent =
@@ -36,6 +40,8 @@ export type ManifestComponent =
       options: ChoiceOption[];
       default?: string;
       required?: boolean;
+      /** When true, each option gets an image upload slot (ticket tiers, product picks). */
+      optionImages?: boolean;
       /** When true, the selected option's `priceUsd` drives the payment amount. */
       pricesAmount?: boolean;
     }

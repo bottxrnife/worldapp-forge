@@ -89,6 +89,10 @@ export default function PublishPage() {
   const menuComp = draft.components.find((c) => c.type === "menu") as
     | Extract<ManifestComponent, { type: "menu" }>
     | undefined;
+  const imageChoiceGroups = draft.components.filter(
+    (c): c is Extract<ManifestComponent, { type: "choiceGroup" }> =>
+      c.type === "choiceGroup" && !!c.optionImages,
+  );
 
   return (
     <main className="mx-auto flex w-full max-w-md flex-col gap-4 px-5 pb-16 pt-6">
@@ -184,6 +188,49 @@ export default function PublishPage() {
           </div>
         </Card>
       )}
+
+      {!result &&
+        imageChoiceGroups.map((cg) => (
+          <Card key={cg.key}>
+            <p className="text-sm font-bold">{cg.label} photos (optional)</p>
+            <p className="mt-0.5 text-xs text-muted">Tap each tile to upload — stored on Walrus.</p>
+            <div className="mt-3 flex flex-col gap-2">
+              {cg.options.map((opt) => (
+                <div key={opt.value} className="flex items-center gap-3 rounded-2xl bg-wash px-3 py-2">
+                  <ImageUploadSlot
+                    blobId={opt.imageBlobId}
+                    alt={opt.label}
+                    size={48}
+                    rounded="rounded-xl"
+                    onUploaded={(blobId) =>
+                      persist({
+                        ...draft,
+                        components: draft.components.map((c) =>
+                          c.type === "choiceGroup" && c.key === cg.key
+                            ? {
+                                ...c,
+                                optionImages: true,
+                                options: c.options.map((o) =>
+                                  o.value === opt.value ? { ...o, imageBlobId: blobId } : o,
+                                ),
+                              }
+                            : c,
+                        ),
+                      })
+                    }
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-bold">{opt.label}</p>
+                    {opt.hint && <p className="text-xs text-muted">{opt.hint}</p>}
+                    {opt.imageBlobId && (
+                      <WalrusProof blobId={opt.imageBlobId} label="Photo" kind="image" compact />
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card>
+        ))}
 
       {result ? (
         <Card className="!bg-success-bg">

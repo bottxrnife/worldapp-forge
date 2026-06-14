@@ -17,7 +17,13 @@ export function walrusAssets(manifest: DappManifest): WalrusAsset[] {
   add("Manifest JSON", manifest.storage?.manifestBlobId, "manifest");
   add("Cover image", manifest.storage?.imageBlobId, "image");
 
-  const menu = manifest.components.find((c) => c.type === "menu");
+  for (const c of manifest.components) {
+    if (c.type === "choiceGroup" && c.optionImages) {
+      for (const opt of c.options) add(`${opt.label} (option)`, opt.imageBlobId, "image");
+    }
+  }
+
+  const menu = manifest.components.find((comp) => comp.type === "menu");
   if (menu?.type === "menu") {
     for (const it of menu.items) add(it.name, it.imageBlobId, "image");
   }
